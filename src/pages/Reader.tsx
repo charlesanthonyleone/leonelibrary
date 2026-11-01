@@ -4,6 +4,7 @@ import { author, getBook, getText, parseText, rightsFor, type Book, type Chapter
 import { uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
 import DesignPanel from '../components/DesignPanel';
 import { RightsTag, Soon } from '../components/ui';
+import { logReading, shareNotesLink } from './Features';
 
 function marked(text: string, hs: Highlight[]) {
   if (!hs.length) return text;
@@ -26,10 +27,16 @@ export default function Reader() {
   const [prog, setProg] = useStored<Progress>(`progress:${id}`, { chapter: 0, pct: 0, at: 0 });
   const [hl, setHl] = useStored<Highlight[]>(`highlights:${id}`, []);
   const [edits, setEdits] = useStored<Edit[]>(`edits:${id}`, []);
-  const [panel, setPanel] = useState<'none' | 'toc' | 'design' | 'notes'>('none');
+  const [panel, setPanel] = useState<'none' | 'toc' | 'design' | 'notes' | 'voice'>('none');
   const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]); const [voice, setVoice] = useStored('voice', ''); const [rate, setRate] = useStored('voice-rate', 1); const [para, setPara] = useState(-1);
+  useEffect(() => { const ss = window.speechSynthesis; if (!ss) return; const f = () => setVoices(ss.getVoices()); f(); ss.addEventListener?.('voiceschanged', f); return () => ss.removeEventListener?.('voiceschanged', f); }, []);
+  // reading log: count a minute for every minute the tab is visible and the reader was active
+  useEffect(() => { let active = Date.now(); const poke = () => { active = Date.now(); }; ['scroll', 'mousemove', 'keydown', 'touchstart'].forEach(e => window.addEventListener(e, poke, { passive: true }));
+    const t = setInterval(() => { if (document.visibilityState === 'visible' && (Date.now() - active < 120000 || window.speechSynthesis?.speaking)) logReading(1); }, 60000);
+    return () => { clearInterval(t); ['scroll', 'mousemove', 'keydown', 'touchstart'].forEach(e => window.removeEventListener(e, poke)); }; }, []);
   const pageRef = useRef<HTMLDivElement>(null);
   const ch = Math.min(Number(sp.get('ch') ?? prog.chapter) || 0, (chapters?.length ?? 1) - 1);
 
@@ -58,12 +65,18 @@ export default function Reader() {
   };
   const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); setSel(null); window.getSelection()?.removeAllRanges(); };
   const goCh = (n: number) => { const p = new URLSearchParams(sp); p.set('ch', String(n)); setSp(p); setPanel('none'); };
-  const speak = () => {
+  const speak = (from = 0) => {
     const ss = window.speechSynthesis; if (!ss) return;
-    if (speaking) { ss.cancel(); setSpeaking(false); return; }
-    const u = new SpeechSynthesisUtterance(paras.slice(0, 12).join(' ')); u.lang = book?.languages[0] ?? 'en'; u.rate = .95; u.onend = () => setSpeaking(false);
-    ss.cancel(); ss.speak(u); setSpeaking(true);
+    if (speaking && from === 0) { ss.cancel(); setSpeaking(false); setPara(-1); return; }
+    ss.cancel(); setSpeaking(true);
+    const v = voices.find(x => x.name === voice);
+    const next = (i: number) => { if (i >= paras.length) { setSpeaking(false); setPara(-1); return; }
+      const u = new SpeechSynthesisUtterance(paras[i]); u.lang = v?.lang ?? book?.languages[0] ?? 'en'; if (v) u.voice = v; u.rate = rate;
+      u.onstart = () => { setPara(i); document.querySelector(`[data-p="${i}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+      u.onend = () => next(i + 1); u.onerror = () => { setSpeaking(false); setPara(-1); }; ss.speak(u); };
+    next(from);
   };
+  const shareNotes = () => { const who = prompt('Sign your notes as', '') ?? ''; const url = shareNotesLink(id, book?.title.split(/[;:]/)[0] ?? 'Notes', who, hl); navigator.clipboard?.writeText(url).catch(() => {}); prompt('Link copied. Anyone with it can read and import your notes:', url); };
 
   const style = { '--r-bg': d.bg, '--r-ink': d.ink, '--r-acc': d.accent, '--r-font': `'${d.font}', Georgia, serif`, '--r-size': `${d.size}px`, '--r-lead': d.leading, '--r-measure': `${d.measure}em`, '--r-align': d.align } as CSSProperties;
   if (err) return (
@@ -80,7 +93,8 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'toc' ? 'none' : 'toc')} className={panel === 'toc' ? 'on' : ''}>Contents</button>
           <button onClick={() => setPanel(panel === 'design' ? 'none' : 'design')} className={panel === 'design' ? 'on' : ''}>Design</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes {hl.length ? `(${hl.length})` : ''}</button>
-          <button onClick={speak} className={speaking ? 'on' : ''} title="Browser voice preview. Studio-quality narration is coming soon.">{speaking ? '■ Stop' : '▶ Listen'}</button>
+          <button onClick={() => speak()} className={speaking ? 'on' : ''} title="Narrate this chapter with your device's voices">{speaking ? '■ Stop' : '▶ Listen'}</button>
+          <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
           <button onClick={() => setEditing(!editing)} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
         </div>
         <div className="rb-progress"><span style={{ width: `${chapters ? ((ch + prog.pct) / chapters.length) * 100 : 0}%` }} /></div>
@@ -90,7 +104,12 @@ export default function Reader() {
         {panel === 'design' && <><h4>Design</h4><DesignPanel compact /><Link className="small" to="/design">Full Design studio →</Link></>}
         {panel === 'notes' && <><h4>Highlights &amp; notes</h4>{!hl.length && <p className="small muted">Select any passage to highlight it or attach a note.</p>}
           <ul className="notes">{hl.map(h => <li key={h.id}><button className="link" onClick={() => goCh(h.chapter)}>{chapters?.[h.chapter]?.title ?? `Ch. ${h.chapter + 1}`}</button><q>{h.text.slice(0, 160)}</q>{h.note && <p>{h.note}</p>}<button className="x" onClick={() => setHl(hl.filter(x => x.id !== h.id))} aria-label="Remove">×</button></li>)}</ul></>}
-        <p className="tiny muted">Narration: browser voice preview now; studio narration <Soon /></p>
+        {panel === 'voice' && <><h4>Narration</h4><p className="small muted">Reads the whole chapter aloud, paragraph by paragraph, using voices installed on your device. Click any paragraph while listening to jump there.</p>
+          <label className="lbl">Voice</label><select className="fx-in" value={voice} onChange={e => setVoice(e.target.value)}><option value="">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</select>
+          <label className="lbl">Speed: {rate.toFixed(2)}×</label><input type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
+          <button className="btn gold sm" onClick={() => speak(Math.max(0, para))}>{speaking ? 'Restart with these settings' : '▶ Start narration'}</button>
+          <p className="tiny muted">AI studio voices (natural narrators, character voices) are coming with AI credits. <Soon /></p></>}
+        {panel === 'notes' && hl.length > 0 && <button className="btn ghost sm" onClick={shareNotes}>Share notes as a link</button>}
       </aside>}
       <article className="page-paper" ref={pageRef}>
         {!chapters && <p className="loading"><span className="spin" /> Opening the book…</p>}
@@ -101,7 +120,7 @@ export default function Reader() {
           <div className="prose">
             {paras.map((p, i) => editing
               ? <p key={i} contentEditable suppressContentEditableWarning className="editable" onBlur={e => { const t = e.currentTarget.textContent ?? ''; if (t !== chapter.paras[i]) setEdits([...edits.filter(x => !(x.chapter === ch && x.para === i)), { chapter: ch, para: i, text: t, at: Date.now() }]); }}>{p}</p>
-              : <p key={i}>{marked(p, chHl.filter(h => p.includes(h.text)))}</p>)}
+              : <p key={i} data-p={i} className={para === i ? 'speaking' : ''} onClick={() => speaking && speak(i)}>{marked(p, chHl.filter(h => p.includes(h.text)))}</p>)}
           </div>
           <nav className="ch-nav">
             <button className="btn ghost" disabled={ch === 0} onClick={() => goCh(ch - 1)}>← Previous</button>

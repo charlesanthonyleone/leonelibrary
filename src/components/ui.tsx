@@ -25,18 +25,26 @@ export function Nav() {
   );
 }
 
+function InstallApp() {
+  const [ev, setEv] = useState<(Event & { prompt: () => void }) | null>(null); const [ok, setOk] = useState(() => window.matchMedia?.('(display-mode: standalone)').matches);
+  useEffect(() => { const f = (e: Event) => { e.preventDefault(); setEv(e as never); }; window.addEventListener('beforeinstallprompt', f); window.addEventListener('appinstalled', () => setOk(true)); return () => window.removeEventListener('beforeinstallprompt', f); }, []);
+  if (ok) return <p className="tiny muted center">Installed. Books you've opened work offline.</p>;
+  return <p className="tiny muted center">{ev ? <button className="btn ghost sm" onClick={() => ev.prompt()}>Install Leone Library</button> : 'Install Leone Library from your browser menu (“Install app” or “Add to Home Screen”) to read offline.'}</p>;
+}
+
 export function Footer() {
   return (
     <footer className="footer">
       <div className="footer-in">
         <div><div className="brand-word big">Leone <em>Library</em></div><p className="muted small">Every book, yours to remake. Published by Leone Publishing.</p></div>
         <div className="foot-cols">
-          <div><h5>Read</h5><Link to="/library">The Library</Link><Link to="/shelf">My Shelf</Link><Link to="/design">Design</Link></div>
-          <div><h5>Create</h5><Link to="/studio/translate">Translate</Link><Link to="/studio/remix">Remix</Link><Link to="/studio/continue">Continue</Link></div>
+          <div><h5>Read</h5><Link to="/library">The Library</Link><Link to="/shelf">My Shelf</Link><Link to="/goals">Reading goals</Link><Link to="/clubs">Book clubs</Link><Link to="/design">Design</Link></div>
+          <div><h5>Create</h5><Link to="/studio/translate">Translate</Link><Link to="/studio/remix">Remix</Link><Link to="/studio/continue">Continue</Link><Link to="/studio/collab">Co-author</Link><Link to="/studio/glossary">Glossary</Link><Link to="/export">Export</Link></div>
           <div><h5>Publish</h5><Link to="/publishing">Leone Publishing</Link><Link to="/publishing/calculator">Fee calculator</Link><Link to="/publishing/submit">Submit a book</Link><Link to="/publishing/royalties">Royalties</Link></div>
-          <div><h5>More</h5><Link to="/plans">Plans</Link><Link to="/classroom">Classroom</Link><Link to="/community">Community</Link><Link to="/rights">Rights</Link></div>
+          <div><h5>More</h5><Link to="/plans">Plans</Link><Link to="/marketplace">Themes</Link><Link to="/shelves">Public shelves</Link><Link to="/classroom">Classroom</Link><Link to="/community">Community</Link><Link to="/rights">Rights</Link></div>
         </div>
       </div>
+      <InstallApp />
       <p className="muted tiny center">Book data: Project Gutenberg via Gutendex, and Wikisource. Leone Library indexes US public-domain works only (first published 1930 or earlier). Rights outside the US differ.</p>
     </footer>
   );

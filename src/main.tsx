@@ -16,6 +16,7 @@ import { Classroom, Community, NotFound, Rights, Storefront } from './pages/Misc
 import './styles.css';
 import './room.css';
 import Plans from './pages/Plans';
+import { PublicShelves, Marketplace, Clubs, SharedNotes, Goals, Glossary, CollabStudio, ExportPage } from './pages/Features';
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -46,6 +47,14 @@ function App() {
           <Route path="/design" element={<Design />} />
           <Route path="/shelf" element={<Shelf />} />
           <Route path="/plans" element={<Plans />} />
+          <Route path="/shelves" element={<PublicShelves />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/clubs" element={<Clubs />} />
+          <Route path="/notes" element={<SharedNotes />} />
+          <Route path="/goals" element={<Goals />} />
+          <Route path="/studio/glossary" element={<Glossary />} />
+          <Route path="/studio/collab" element={<CollabStudio />} />
+          <Route path="/export" element={<ExportPage />} />
           <Route path="/studio" element={<StudioHub />} />
           <Route path="/studio/translate" element={<Translate />} />
           <Route path="/studio/remix" element={<Remix />} />
@@ -66,6 +75,8 @@ function App() {
     </>
   );
 }
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {}));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ErrorBoundary><BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><App /></BrowserRouter></ErrorBoundary></React.StrictMode>,

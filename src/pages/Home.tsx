@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Room from '../components/Room';
 import { fromPreset } from '../lib/room';
 import { STARTER } from './Shelf';
+import { Contest } from './Features';
 
 const ROOMS = [
   { n: 'I', to: '/library', t: 'The Library', d: 'Tens of thousands of public-domain classics from Project Gutenberg, free to read in a reader you can make your own.' },
@@ -39,6 +40,16 @@ export default function Home() {
           <div className="row gap wrap"><Link className="btn gold" to="/shelf">Design my shelf</Link><Link className="btn ghost" to="/plans">See plans</Link></div>
         </div>
         <Room cfg={meadow} books={STARTER.slice(0, 6)} rows={1} compact />
+      </section>
+
+      <Contest />
+
+      <section className="section">
+        <div className="eyebrow">Also in the library</div>
+        <h2 className="display">Read with people, keep the habit</h2>
+        <div className="feature-grid fx-links">
+          {[['/clubs', 'Book clubs', 'One pace, a thread per chapter, no spoilers.'], ['/goals', 'Goals & streaks', 'A daily habit and a yearly recap from your real reading.'], ['/shelves', 'Public shelves', 'Publish your 3D room as a link others can follow.'], ['/marketplace', 'Theme marketplace', 'Rooms and reader palettes, installed in one click.'], ['/studio/collab', 'Co-author a remix', 'Versions, diffs and agreed royalty splits.'], ['/export', 'EPUB & print', 'Download your edition or size a print cover.']].map(([to, t, d]) => <Link key={to} to={to} className="feature glass"><h3>{t}</h3><p>{d}</p></Link>)}
+        </div>
       </section>
 
       <section className="section closing center">
