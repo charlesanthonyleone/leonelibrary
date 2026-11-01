@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import RM from './ridgeMeta.json';
 
 /* Leone Library: the view from a high summit at night, over a vast ocean far below.
    Sky, stars, meteors and ocean shader adapted from RecordOfLaw's OceanSky; the camera now sits at altitude and
@@ -28,26 +29,6 @@ float n3(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
              mix(mix(h31(i+vec3(0,0,1)),h31(i+vec3(1,0,1)),f.x),mix(h31(i+vec3(0,1,1)),h31(i+vec3(1,1,1)),f.x),f.y),f.z); }
 float fbm3(vec3 p, int o){ float a=.5, s=0.; for(int i=0;i<5;i++){ if(i>=o) break; s+=a*n3(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=.5; } return s; }
 float rdg(float x, float s){ float h = 0., a = .5, f = 1.; for (int i=0;i<7;i++){ float v = 1. - abs(n2(vec2(x*f + s, s*1.37 + float(i)*3.1))); h += a*v*v; f *= 2.07; a *= .5; } return h; }
-// one ridge layer: base profile + framing (higher at the edges, a saddle in the middle so the sea shows)
-float ridgeH(float x, float base, float amp, float frame, float s, float fq){ float c = x - .5*R.x/R.y; return base + amp*rdg(x*fq, s) + frame*c*c; }
-vec3 layer(vec3 col, vec2 q, float h, float amp, float fq, vec3 rock, float fogAmt, float rimK, float s, float tex){
-  float px = 1.5/R.y; float a = smoothstep(h + px, h - px, q.y); if (a <= 0.) return col;
-  float e = .012;
-  float d = max(h - q.y, 0.);
-  // moon is upper-right: faces sloping down to the right catch rim light
-  float slope = 0.; slope = clamp(-(rdg((q.x + e)*fq, s) - rdg((q.x - e)*fq, s))*amp/(2.*e)*.6 + .15, 0., 1.);
-  vec3 c = rock * (.55 + .9*tex*fbm3(vec3(q*vec2(24., 60.), s), 4));
-  c += vec3(.30,.34,.44) * rimK * exp(-d*R.y/2.2) * (.05 + 1.4*slope*slope);           // crisp rim
-  c += vec3(.012,.014,.020) * rimK * exp(-d*9.) * smoothstep(.3,.9,slope) * smoothstep(.35,.7,fbm3(vec3(q*vec2(9.,5.), s+2.), 3));                 // broad moonlit face
-  c = mix(c, vec3(.0035,.0055,.009), fogAmt * (1. - .6*smoothstep(0., .12, d))); // atmospheric perspective, more at the crest
-  return mix(col, c, a);
-}
-vec3 cloudBand(vec3 col, vec2 q, float y0, float th, float k, float sp){
-  float m = fbm3(vec3(q.x*2.2 - TS*sp, q.y*7., TS*.02), 5);
-  float band = exp(-pow((q.y - y0)/th, 2.)); float a = smoothstep(.5, .9, m) * band * k * .8;
-  vec3 cc = vec3(.005,.006,.009) + vec3(.016,.019,.026)*smoothstep(.7,.98,m)*smoothstep(y0 - th, y0 + th, q.y); // moonlit tops
-  return mix(col, cc, a);
-}
 mat3 rotY(float a){ float c=cos(a), s=sin(a); return mat3(c,0,-s, 0,1,0, s,0,c); }
 mat3 rotX(float a){ float c=cos(a), s=sin(a); return mat3(1,0,0, 0,c,s, 0,-s,c); }
 
@@ -158,14 +139,6 @@ void main(){
     col = mix(col, vec3(.006,.009,.015), fog*.92);
   }
   col = mix(col, vec3(.010,.014,.022), mist*.55);
-  // ---- the summit: far ranges dissolving into haze, low clouds in the valleys, dark moonlit rock in front
-  vec2 q = vec2(gl_FragCoord.x / R.y, gl_FragCoord.y / R.y);
-  float hzy = 1. - HZ;
-  col = layer(col, q, ridgeH(q.x, hzy - .13, .075, .03, 3.1, 2.2), .075, 2.2, vec3(.0030,.0045,.0075), .55, .30, 3.1, .25);
-  col = cloudBand(col, q, hzy - .12, .035, 1.0, .010);
-  col = layer(col, q, ridgeH(q.x, hzy - .25, .13, .09, 7.7, 1.0), .13, 1.0, vec3(.0012,.0017,.0028), .30, .55, 7.7, .45);
-  col = cloudBand(col, q, hzy - .24, .05, 1.0, .016);
-  col = layer(col, q, ridgeH(q.x, hzy - .50, .30, .22, 1.9, .75), .30, .75, vec3(.0005,.0006,.0009), .0, .8, 1.9, .9);
   col *= 1. - .32*dot(uv*.85, uv*.85); // vignette
   col = col / (1. + col*.5);
   col = pow(col, vec3(.4545));
@@ -187,16 +160,25 @@ const spikeSprite = () => { const c = document.createElement('canvas'); c.width 
 function mulberry(a: number) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 
-// ---- JS twin of the shader's ridge profile, so 2D-layer stars and meteors hide behind the peaks
-const fr = (x: number) => x - Math.floor(x);
-function h21(x: number, y: number) { let a = fr(x * .1031), b = fr(y * .1031), c = fr(x * .1031); const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33); a += d; b += d; c += d; return fr((a + b) * c); }
-function n2(x: number, y: number) { const ix = Math.floor(x), iy = Math.floor(y); let fx = x - ix, fy = y - iy; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-  const a = h21(ix, iy), b = h21(ix + 1, iy), c = h21(ix, iy + 1), d = h21(ix + 1, iy + 1); return -1 + 2 * ((a + (b - a) * fx) + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy); }
-function rdg(x: number, s: number) { let h = 0, a = .5, f = 1; for (let i = 0; i < 7; i++) { const v = 1 - Math.abs(n2(x * f + s, s * 1.37 + i * 3.1)); h += a * v * v; f *= 2.07; a *= .5; } return h; }
-const LAYERS: [number, number, number, number, number][] = [[-.13, .075, .03, 3.1, 2.2], [-.25, .13, .09, 7.7, 1.0], [-.50, .30, .22, 1.9, .75]];
-/** height (fraction of H, from the bottom) of the tallest ridge at screen x */
-function ridgeTop(xPx: number, W: number, H: number) { const x = xPx / H, c = x - .5 * W / H, hzy = 1 - HORIZON; let m = 0;
-  for (const [b, a, fm, s, fq] of LAYERS) m = Math.max(m, hzy + b + a * rdg(x * fq, s) + fm * c * c); return m; }
+// ---- photographic mountains: two masked, night-graded layers cut from a real photo (see credits) and composited
+// over the shader's sea with a little parallax. RM holds the source size and each layer's skyline, so stars and
+// meteors on the 2D layer, and meteors landing in the sea, respect the peaks.
+const RIDGE_Y = .085; // far ridge crest sits this far (fraction of H) below the horizon, leaving a band of open sea
+/** layout shared by the drawing and the skyline mask: drawn width/left and the far ridge crest y */
+function mtnLayout(W: number, H: number) {
+  const top = H * (HORIZON + RIDGE_Y), frac = (1 - RM.ridgeTop) * RM.srcH / RM.srcW;
+  const dw = Math.max(W * 1.05, (H - top) * 1.02 / frac), y0 = top - 0; // y0: where the far image's top row lands
+  const nk = 1.14, yN = y0 + (RM.humpTop - RM.ridgeTop) * RM.srcH * (dw / RM.srcW) * .78; // near summit: closer, so larger
+  const cw = Math.max(W * .46, H * .62), ch = cw * RM.cragAR; // foreground crag, anchored bottom-left
+  return { dw, x0: (W - dw) / 2, y0, k: dw / RM.srcW, nk, yN, cw, ch, cy: H - ch + 2 };
+}
+function profileAt(prof: number[], u: number) { const f = Math.max(0, Math.min(1, u)) * (prof.length - 1), i = Math.floor(f), t = f - i; return prof[i] + ((prof[Math.min(i + 1, prof.length - 1)] ?? prof[i]) - prof[i]) * t; }
+/** screen y of the highest mountain edge at screen x */
+function ridgeTopY(x: number, W: number, H: number) { const L = mtnLayout(W, H), u = (x - L.x0) / L.dw;
+  const dn = L.dw * L.nk, un = (x - (W - dn) / 2) / dn;
+  let y = Math.min(L.y0 + (profileAt(RM.ridge, u) - RM.ridgeTop) * RM.srcH * L.k + 8 * L.k, L.yN + (profileAt(RM.hump, un) - RM.humpTop) * RM.srcH * L.k * L.nk);
+  if (x < L.cw) y = Math.min(y, L.cy + profileAt(RM.crag, x / L.cw) * L.ch);
+  return y; }
 
 type Star = { r: number; a: number; m: number; c: number; f1: number; f2: number; p: number };
 type Meteor = { x: number; y: number; vx: number; vy: number; life: number; age: number; len: number; comet?: boolean; lands?: boolean; ly?: number };
@@ -205,9 +187,10 @@ export default function MountainSky() {
   const glRef = useRef<HTMLCanvasElement>(null);
   const bgRef = useRef<HTMLCanvasElement>(null);
   const topRef = useRef<HTMLCanvasElement>(null);
+  const mtRef = useRef<HTMLCanvasElement>(null);
   const fbRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const cv = glRef.current!, bg = bgRef.current!, top = topRef.current!;
+    const cv = glRef.current!, bg = bgRef.current!, top = topRef.current!, mt = mtRef.current!;
     let st = sceneSettings();
     const onSet = () => { st = sceneSettings(); kick(); };
     window.addEventListener(SCENE_EVT, onSet);
@@ -277,7 +260,7 @@ export default function MountainSky() {
       // the shader is soft everywhere (stars live on the crisp 2D layer), so cap its pixel budget for a steady 60fps
       gs = Math.min(dpr, Math.sqrt(2.4e6 / (W * H)));
       cv.width = Math.round(W * gs); cv.height = Math.round(H * gs);
-      for (const c of [bg, top]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0); }
+      for (const c of [bg, top, mt]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0); }
       if (gl && ok) gl.viewport(0, 0, cv.width, cv.height);
       const rnd = mulberry(7), D = Math.hypot(W, H) * 1.35, n = Math.round(Math.min(4500, W * H / 300));
       stars = Array.from({ length: n }, () => { const u = rnd(); const m = Math.pow(u, 6.5); // power law: many faint, few brilliant
@@ -285,7 +268,7 @@ export default function MountainSky() {
           f1: 1.5 + rnd() * 3.5, f2: 4 + rnd() * 6, p: rnd() * 6.283 }; });
     };
     let mask: Float32Array = new Float32Array(0);
-    const buildMask = () => { mask = new Float32Array(Math.ceil(W / 3) + 2); for (let i = 0; i < mask.length; i++) mask[i] = H * (1 - ridgeTop(i * 3, W, H)) - 2; };
+    const buildMask = () => { mask = new Float32Array(Math.ceil(W / 3) + 2); for (let i = 0; i < mask.length; i++) mask[i] = ridgeTopY(i * 3, W, H) - 2; };
     const skyY = (x: number) => mask[Math.max(0, Math.min(mask.length - 1, Math.round(x / 3)))] ?? H * HORIZON;
     const ridgePath = (c: CanvasRenderingContext2D) => { c.beginPath(); c.moveTo(0, 0); c.lineTo(W, 0); for (let x = W; x >= 0; x -= 3) c.lineTo(x, Math.min(skyY(x), H * HORIZON)); c.closePath(); };
     resize(); buildMask(); window.addEventListener('resize', resize); window.addEventListener('resize', buildMask);
@@ -335,7 +318,9 @@ export default function MountainSky() {
         nextComet = t + 50 + Math.random() * 40;
       }
       if (t > nextLander) {
-        const ly = hz + (H - hz) * (.1 + Math.random() * .35), lx = W * (.15 + Math.random() * .7);
+        const lx = W * (.15 + Math.random() * .7), gap = skyY(lx) - hz - 6; // land only on open sea, never on the mountains
+        if (gap < 10) { nextLander = t + 3; return; }
+        const ly = hz + 3 + gap * (.15 + Math.random() * .7);
         const dur = 1.4 + Math.random() * .6, sx = lx + (Math.random() < .5 ? -1 : 1) * W * (.22 + Math.random() * .15), sy = hz * .04;
         meteors.push({ x: sx, y: sy, vx: (lx - sx) / dur, vy: (ly - sy) / dur, life: dur, age: 0, len: 230, lands: true, ly });
         nextLander = t + 20 + Math.random() * 18;
@@ -372,6 +357,32 @@ export default function MountainSky() {
       const rg = c.createRadialGradient(m.x, m.y, 0, m.x, m.y, r); rg.addColorStop(0, `rgba(255,255,255,${fade})`); rg.addColorStop(.35, `rgba(215,230,255,${.5 * fade})`); rg.addColorStop(1, 'rgba(170,200,255,0)');
       c.fillStyle = rg; c.beginPath(); c.arc(m.x, m.y, r, 0, 7); c.fill();
     };
+    // ---- photographic mountains (masked + night-graded offline; see credits). Far ridge and near summit are separate
+    // layers so they can slide a few px apart: pointer parallax plus a very slow drift while the sky is animated.
+    const m2 = mt.getContext('2d')!;
+    const far = new Image(), near = new Image(), crag = new Image(); let mtnReady = 0;
+    for (const [im, f] of [[far, 'ridge-far'], [near, 'ridge-near'], [crag, 'crag']] as const) { im.decoding = 'async'; im.onload = () => { mtnReady++; mtnKey = ''; kick(); }; im.src = import.meta.env.BASE_URL + 'sky/' + f + '.webp'; }
+    let mtnKey = '', px = 0, py = 0, tpx = 0, tpy = 0;
+    const onPtr = (e: PointerEvent) => { tpx = e.clientX / W * 2 - 1; tpy = e.clientY / H * 2 - 1; kick(); };
+    window.addEventListener('pointermove', onPtr, { passive: true });
+    const drawMtn = (t: number, dt: number) => {
+      if (mtnReady < 3) return;
+      const k = st.ui || st.sky ? 1 - Math.exp(-dt * 2.5) : 1; px += (tpx - px) * k; py += (tpy - py) * k;
+      const drift = st.sky ? Math.sin(t * .05) : 0;
+      const L = mtnLayout(W, H), sF = -(px * 4 + drift * 2.5), sN = -(px * 11 + drift * 6), vN = -py * 3, sC = -(px * 24 + drift * 12), vC = -py * 7;
+      const key = [W, H, sF.toFixed(1), sN.toFixed(1), vN.toFixed(1), sC.toFixed(1), vC.toFixed(1)].join();
+      if (key === mtnKey) return; mtnKey = key;
+      m2.clearRect(0, 0, W, H);
+      const dh = far.naturalHeight * L.dw / far.naturalWidth;
+      m2.drawImage(far, L.x0 + sF, L.y0, L.dw, dh);
+      const dN = L.dw * L.nk;
+      m2.drawImage(near, (W - dN) / 2 + sN, L.yN + vN, dN, near.naturalHeight * dN / near.naturalWidth);
+      if (crag.complete && crag.naturalWidth) m2.drawImage(crag, sC - 30, L.cy + vC, L.cw + 30, L.ch + 30 * RM.cragAR);
+      // atmospheric seam: a breath of moonlit sea mist where the far ridge meets the water
+      const hz = H * HORIZON, g = m2.createLinearGradient(0, hz, 0, L.y0 + 30);
+      g.addColorStop(0, 'rgba(30,38,54,0)'); g.addColorStop(.8, 'rgba(30,38,54,.12)'); g.addColorStop(1, 'rgba(30,38,54,0)');
+      m2.globalCompositeOperation = 'destination-over'; m2.fillStyle = g; m2.fillRect(0, hz, W, L.y0 + 30 - hz); m2.globalCompositeOperation = 'source-over';
+    };
     const flashes: { x: number; y: number; age: number }[] = [];
     const RIP = new Float32Array(16);
     let last = performance.now();
@@ -381,7 +392,7 @@ export default function MountainSky() {
       if (st.ocean) tOcean += dt; if (st.sky) tSky += dt;
       const t = tSky;
       b2.clearRect(0, 0, W, H); t2.clearRect(0, 0, W, H);
-      drawStars(t); drawMoon();
+      drawStars(t); drawMoon(); drawMtn(t, dt);
       if (st.sky) {
         spawn(t);
         for (const m of meteors) { m.age += dt; m.x += m.vx * dt; m.y += m.vy * dt; }
@@ -416,7 +427,7 @@ export default function MountainSky() {
     document.addEventListener('visibilitychange', onVis);
     const onLost = (e: Event) => { e.preventDefault(); ok = false; cv.style.display = 'none'; fbRef.current?.classList.add('on'); };
     cv.addEventListener('webglcontextlost', onLost);
-    return () => { dead = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('resize', buildMask); window.removeEventListener('resize', onResize); window.removeEventListener(SCENE_EVT, onSet); document.removeEventListener('visibilitychange', onVis); cv.removeEventListener('webglcontextlost', onLost); };
+    return () => { dead = true; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('resize', buildMask); window.removeEventListener('resize', onResize); window.removeEventListener('pointermove', onPtr); window.removeEventListener(SCENE_EVT, onSet); document.removeEventListener('visibilitychange', onVis); cv.removeEventListener('webglcontextlost', onLost); };
   }, []);
   return (
     <>
@@ -424,6 +435,7 @@ export default function MountainSky() {
         <div ref={fbRef} className="scene-fallback" />
         <canvas ref={glRef} className="scene-gl" />
         <canvas ref={bgRef} className="scene-2d" />
+        <canvas ref={mtRef} className="scene-mtn" />
       </div>
       <canvas ref={topRef} className="scene-top" aria-hidden="true" />
       <SceneSettings />
@@ -452,7 +464,7 @@ function SceneSettings() {
         <label><input type="checkbox" checked={v.ui} onChange={(e) => upd({ ui: e.target.checked })} /> Interface motion (shelf, spines)</label>
         <p className="muted small">Off shows a still frame. Defaults follow your system's reduced-motion setting.</p>
         <p className="muted small scene-credit">Milky Way photo: <a href="https://www.eso.org/public/images/eso0932a/" target="_blank" rel="noreferrer">ESO/S. Brunier</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> (cropped, colour-graded) · Moon photo: <a href="https://commons.wikimedia.org/wiki/File:FullMoon2010.jpg" target="_blank" rel="noreferrer">Gregory H. Revera</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer">CC BY-SA 3.0</a> (cropped, masked)</p>
-        <p className="muted small">Mountains, clouds and ocean are rendered live in WebGL.</p>
+        <p className="muted small">Ocean and clouds are rendered live in WebGL. Mountains: <a href="https://commons.wikimedia.org/wiki/File:Morning_Layers_from_Peaky_Peak.jpg" target="_blank" rel="noreferrer">“Morning Layers from Peaky Peak”</a> by Megaurab09, CC BY-SA 4.0; foreground rocks: <a href="https://commons.wikimedia.org/wiki/File:Boulders_(50066572142).jpg" target="_blank" rel="noreferrer">“Boulders”</a>, Joshua Tree National Park (NPS), public domain — both via Wikimedia Commons, masked and colour-graded to night.</p>
       </div>}
       <button className="scene-gear glass" aria-expanded={open} aria-label="Scene settings" title="Scene settings" onClick={() => setOpen(!open)}>⚙</button>
     </div>
