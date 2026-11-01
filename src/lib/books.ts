@@ -65,7 +65,11 @@ export function parseText(raw: string): { front: string; chapters: Chapter[] } {
   const e = t.search(/\*\*\*\s*END OF (THE|THIS) PROJECT GUTENBERG/i);
   if (e >= 0) t = t.slice(0, e);
   t = t.replace(/\[Illustration[^\]]*\]/gi, "").replace(/\[Copyright[^\]]*\]/gi, "");
-  const blocks = t.split(/\n\s*\n/).map(p => p.replace(/\s*\n\s*/g, ' ').replace(/_([^_]+)_/g, '$1').trim()).filter(Boolean);
+  const junk = /^(produced by|transcriber|e-?text prepared|this e-?book|updated editions|release date|language:|character set|credits?:|most recently updated|\*\*\*)/i;
+  let blocks = t.split(/\n\s*\n/).map(p => p.replace(/\s*\n\s*/g, ' ').replace(/_([^_]+)_/g, '$1').trim()).filter(b => b && !junk.test(b));
+  // edition front matter (printer, publisher addresses, plate lists): drop short lines before the first real paragraph or heading
+  const first = blocks.findIndex(b => b.length > 220 || (b.length < 90 && /^(CHAPTER|Chapter|PREFACE|Preface|INTRODUCTION|Introduction|LETTER|STAVE|BOOK|PART)\b|^[IVXLC]{1,7}\.?$/.test(b)));
+  if (first > 0) blocks = blocks.slice(first);
   const head = /^(CHAPTER|Chapter|CHAP\.|BOOK|Book|LETTER|Letter|STAVE|PART|Part|ACT|Act|ГЛАВА|Глава|KAPITEL|Kapitel|CHAPITRE|Chapitre|[IVXLC]{1,7}\.?)(\s|$)[^.]{0,80}$/;
   const chapters: Chapter[] = [];
   let cur: Chapter = { title: 'Opening', paras: [] };

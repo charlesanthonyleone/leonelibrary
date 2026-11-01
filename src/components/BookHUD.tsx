@@ -38,7 +38,7 @@ export default function BookHUD({ lib, st, title, chapters, fs, onFs, onClose }:
         <button className="bh-link" onClick={() => setToc(!toc)} disabled={!chapters?.length}>{pageLabel()} <span className="muted">· {Math.round((st.spread / Math.max(1, st.spreads - 1)) * 100)}%</span></button>
         <input type="range" aria-label="Go to page" min={0} max={Math.max(0, st.spreads - 1)} value={st.spread} onChange={e => lib?.jump(+e.target.value)} />
       </div>
-      <button className={`bh-btn ${speaking ? 'on' : ''}`} onClick={listen} title="Narrate the open pages with your device's voices">{speaking ? '■' : '▶'} <span className="hide-sm">{speaking ? 'Stop' : 'Listen'}</span></button>
+      <button className={`bh-btn ${speaking ? 'on' : ''}`} onClick={listen} title="Narrate the open pages with your device's voices">{speaking ? '■' : '▶'} <span>{speaking ? 'Stop' : 'Listen'}</span></button>
       <button className="bh-btn icon" onClick={() => lib?.next()} aria-label="Next page">›</button>
     </div>
     {toc && chapters && <div className="book-toc glass" onClick={e => e.stopPropagation()}>

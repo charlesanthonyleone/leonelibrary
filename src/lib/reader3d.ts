@@ -143,12 +143,14 @@ export function drawPage(c: HTMLCanvasElement, p: PageD | null, L: ReaderLook, L
 
 /** Endpaper for the inside of the boards: marbled when leather, plain tinted otherwise. */
 export function drawEndpaper(c: HTMLCanvasElement, L: ReaderLook, col: string) {
-  c.width = 512; c.height = 720; const g = c.getContext('2d')!, r = rnd(3);
-  g.fillStyle = col; g.fillRect(0, 0, 512, 720); g.globalAlpha = .9;
-  const [cr, cg, cb] = hexRgb(col);
-  for (let k = 0; k < 260; k++) { const x = r() * 512, y = r() * 720, rr = 8 + r() * 46; g.fillStyle = `rgba(${Math.min(255, cr + 60 + r() * 60)},${Math.min(255, cg + 50 + r() * 50)},${Math.min(255, cb + 30 + r() * 40)},${.08 + r() * .18})`; g.beginPath(); g.ellipse(x, y, rr, rr * (.4 + r() * .6), r() * 3, 0, 7); g.fill(); }
-  g.globalAlpha = .25; g.strokeStyle = 'rgba(255,240,210,.5)'; for (let k = 0; k < 90; k++) { g.beginPath(); let x = r() * 512, y = r() * 720; g.moveTo(x, y); for (let s = 0; s < 8; s++) { x += (r() - .5) * 60; y += 20 + r() * 30; g.lineTo(x, y); } g.stroke(); }
-  g.globalAlpha = 1;
+  // quiet combed marble: the binding colour with fine, low-contrast veins (no blobs)
+  c.width = 512; c.height = 720; const g = c.getContext('2d')!, r = rnd(3); void L;
+  const [cr, cg, cb] = hexRgb(col); g.fillStyle = col; g.fillRect(0, 0, 512, 720);
+  for (let k = 0; k < 120; k++) { const y0 = k * 6.2 + r() * 3, lt = r() > .5, a = .05 + r() * .07;
+    g.strokeStyle = lt ? `rgba(${Math.min(255, cr + 70)},${Math.min(255, cg + 62)},${Math.min(255, cb + 50)},${a})` : `rgba(0,0,0,${a * .8})`;
+    g.lineWidth = 1 + r() * 2.5; g.beginPath(); const ph = r() * 6, amp = 4 + r() * 6;
+    for (let x = 0; x <= 512; x += 8) { const y = y0 + Math.sin(x / 38 + ph) * amp + Math.sin(x / 11 + y0) * 1.2; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+  const v = g.createRadialGradient(256, 360, 120, 256, 360, 480); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.18)'); g.fillStyle = v; g.fillRect(0, 0, 512, 720);
 }
 
 /** Cover board: binding grain, a blind-stamped frame and the title in foil. */

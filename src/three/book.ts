@@ -61,7 +61,7 @@ export class OpenBook {
   onState?: (s: BookState) => void; onTurn?: () => void;
 
   constructor(dims: { w: number; h: number; t: number }, meta: { title: string; author: string; color: string }, look: ReaderLook, maxAniso: number) {
-    this.W = dims.w; this.H = dims.h; this.T = Math.max(.006, dims.t - this.B * 2); this.G = Math.min(.03, this.W * .18); this.look = look; this.meta = meta; this.maxAniso = maxAniso;
+    this.W = dims.w; this.H = dims.h; this.T = Math.max(.006, dims.t - this.B * 2); this.G = Math.min(.014, this.W * .075); this.look = look; this.meta = meta; this.maxAniso = maxAniso;
     this.LH = Math.round(LW * this.H / this.W); this.hR = this.T;
     const geo = this.geo = new THREE.PlaneGeometry(this.W, this.H, 48, 8); geo.rotateX(-Math.PI / 2); geo.translate(this.W / 2, 0, 0);
     this.left = new Sheet(geo, this.W, this.H, this.G); this.right = new Sheet(geo, this.W, this.H, this.G); this.turn = new Sheet(geo, this.W, this.H, this.G);
@@ -142,7 +142,7 @@ export class OpenBook {
   jump(k: number) { this.anim = null; this.queue = 0; this.turn.g.visible = false; this.k = Math.max(0, Math.min(this.sheets() - 1, k)); [this.hL, this.hR] = this.hFor(this.k); this.show(); this.layout(); this.emit(); }
   show() { const k = this.k; this.right.set(this.tex(2 * k), null); this.left.set(null, this.tex(2 * k - 1)); }
   anchor() { const i = Math.max(0, 2 * this.k - 1), p = this.pages[i]?.kind === 'text' ? this.pages[i] : this.pages[2 * this.k]; return p && p.kind === 'text' ? { ch: p.ch, para: p.para } : null; }
-  state(): BookState { const k = this.k, l = this.pages[2 * k - 1], r = this.pages[2 * k];
+  state(): BookState { const k = this.anim && !this.anim.drag ? this.k + this.anim.dir : this.k, l = this.pages[2 * k - 1], r = this.pages[2 * k];
     return { spread: k, spreads: this.sheets(), left: 2 * k - 1, right: 2 * k, leftNum: l?.num, rightNum: r?.num, chapter: Math.max(0, (r ?? l)?.ch ?? 0), phase: this.anim ? 'turning' : 'still' }; }
   emit() { this.onState?.(this.state()); }
   visibleText() { return [this.pages[2 * this.k - 1]?.text, this.pages[2 * this.k]?.text].filter(Boolean).join(' '); }
@@ -153,7 +153,7 @@ export class OpenBook {
     const k = this.k; if (!this.canTurn(dir)) return false;
     if (dir > 0) { this.turn.set(this.tex(2 * k), this.tex(2 * k + 1)); this.right.set(this.tex(2 * k + 2), null); }
     else { this.turn.set(this.tex(2 * k - 2), this.tex(2 * k - 1)); this.left.set(null, this.tex(2 * k - 3)); if (k - 1 === 0) this.left.g.visible = false; }
-    this.anim = { dir, t: 0, from: dir > 0 ? 0 : 1, to: dir > 0 ? 1 : 0, speed: 1, drag, tilt };
+    this.anim = { dir, t: 0, from: dir > 0 ? 0 : 1, to: dir > 0 ? 1 : 0, speed: 1, drag, tilt }; if (!drag) queueMicrotask(() => this.emit());
     this.setTurn(this.anim.from); this.turn.g.visible = true; this.onTurn?.(); return true;
   }
   flip(dir: 1 | -1) {
@@ -174,7 +174,7 @@ export class OpenBook {
     const a = this.anim!; this.anim = null; this.k += a.dir; this.turn.g.visible = false; [this.hL, this.hR] = this.hFor(this.k); this.show(); this.layout(); this.emit();
     if (this.queue > 0) { this.queue--; if (this.begin(a.dir)) (this.anim as any).speed = 1.8; }
   }
-  cancel() { const a = this.anim!; this.anim = null; this.turn.g.visible = false; [this.hL, this.hR] = this.hFor(this.k); this.show(); this.layout(); void a; }
+  cancel() { const a = this.anim!; this.anim = null; this.turn.g.visible = false; [this.hL, this.hR] = this.hFor(this.k); this.show(); this.layout(); void a; this.emit(); }
   drag(p: number) { const a = this.anim; if (!a?.drag) return; a.t = p; this.setTurn(a.dir > 0 ? p : 1 - p); }
   release(commit: boolean) { const a = this.anim; if (!a?.drag) return; a.drag = false; const cur = a.t; a.from = a.dir > 0 ? cur : 1 - cur;
     a.to = commit ? (a.dir > 0 ? 1 : 0) : (a.dir > 0 ? 0 : 1); a.t = 0; (a as any).back = !commit; a.speed = 1.4; }

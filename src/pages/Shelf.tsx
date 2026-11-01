@@ -72,6 +72,7 @@ export default function Shelf() {
   useEffect(() => { if (!rs || rs.stage !== 'reading' || !rs.anchor || !chs) return; const n = Number(rs.id);
     save(`bookmark:${n}`, rs.anchor); save(`progress:${n}`, { chapter: Math.max(0, rs.anchor.ch), pct: 0, at: Date.now() }); active.current = Date.now(); }, [rs?.spread, rs?.focus, chs]);
   const reading = !!rs;
+  useEffect(() => { document.body.classList.toggle('is-reading', reading); return () => document.body.classList.remove('is-reading'); }, [reading]);
   useEffect(() => { if (!reading) return; const t = setInterval(() => { if (document.visibilityState === 'visible' && (Date.now() - active.current < 120000 || window.speechSynthesis?.speaking)) logReading(1); }, 60000); return () => clearInterval(t); }, [reading]);
   const toggleFs = () => { const el = roomRef.current; if (!el) return;
     if (document.fullscreenElement) { void document.exitFullscreen(); return; }

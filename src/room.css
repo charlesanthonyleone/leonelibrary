@@ -339,3 +339,5 @@ select.fx-in option { background: #12151d; }
   .hide-sm { display: none; }
   .book-hud.top .bh-btn { padding: 6px 10px; font-size: 12px; }
 }
+/* reading: get the site chrome out of the way on small screens */
+@media (max-width: 760px) { body.is-reading .nav { opacity: 0; pointer-events: none; transform: translateY(-120%); transition: .3s; } }
