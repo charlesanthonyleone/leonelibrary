@@ -170,7 +170,7 @@ function mtnLayout(W: number, H: number) {
   const dw = Math.max(W * 1.05, (H - top) * 1.02 / frac), y0 = top - 0; // y0: where the far image's top row lands
   const nk = 1.14, yN = y0 + (RM.humpTop - RM.ridgeTop) * RM.srcH * (dw / RM.srcW) * .78; // near summit: closer, so larger
   const cw = Math.max(W * .46, H * .62), ch = cw * RM.cragAR; // foreground crag, anchored bottom-left
-  return { dw, x0: (W - dw) / 2, y0, k: dw / RM.srcW, nk, yN, cw, ch, cy: H - ch + 2 };
+  return { dw, x0: (W - dw) / 2, y0, k: dw / RM.srcW, nk, yN, cw, ch, cy: H - ch + 8 };
 }
 function profileAt(prof: number[], u: number) { const f = Math.max(0, Math.min(1, u)) * (prof.length - 1), i = Math.floor(f), t = f - i; return prof[i] + ((prof[Math.min(i + 1, prof.length - 1)] ?? prof[i]) - prof[i]) * t; }
 /** screen y of the highest mountain edge at screen x */
@@ -373,11 +373,16 @@ export default function MountainSky() {
       const key = [W, H, sF.toFixed(1), sN.toFixed(1), vN.toFixed(1), sC.toFixed(1), vC.toFixed(1)].join();
       if (key === mtnKey) return; mtnKey = key;
       m2.clearRect(0, 0, W, H);
-      const dh = far.naturalHeight * L.dw / far.naturalWidth;
-      m2.drawImage(far, L.x0 + sF, L.y0, L.dw, dh);
-      const dN = L.dw * L.nk;
-      m2.drawImage(near, (W - dN) / 2 + sN, L.yN + vN, dN, near.naturalHeight * dN / near.naturalWidth);
-      if (crag.complete && crag.naturalWidth) m2.drawImage(crag, sC - 30, L.cy + vC, L.cw + 30, L.ch + 30 * RM.cragAR);
+      // each layer: draw, then smear its last opaque rows down to the viewport bottom so no layer ever ends in a hard
+      // edge or a gap above the fold (tall phones, vertical parallax), whatever the aspect ratio
+      const lay = (im: HTMLImageElement, x: number, y: number, w: number) => { const h = im.naturalHeight * w / im.naturalWidth;
+        m2.drawImage(im, x, y, w, h); if (y + h < H + 12) m2.drawImage(im, 0, im.naturalHeight - 3, im.naturalWidth, 2, x, y + h - 2, w, H - y - h + 14); };
+      lay(far, L.x0 + sF, L.y0, L.dw);
+      const dN = L.dw * L.nk; lay(near, (W - dN) / 2 + sN, L.yN + vN, dN);
+      lay(crag, sC - 30, L.cy + vC, L.cw + 30);
+      // ground the whole stack: a soft deepening toward the bottom edge
+      const gb = m2.createLinearGradient(0, H * .72, 0, H); gb.addColorStop(0, 'rgba(3,5,10,0)'); gb.addColorStop(1, 'rgba(3,5,10,.55)');
+      m2.globalCompositeOperation = 'source-atop'; m2.fillStyle = gb; m2.fillRect(0, H * .72, W, H * .28); m2.globalCompositeOperation = 'source-over';
       // atmospheric seam: a breath of moonlit sea mist where the far ridge meets the water
       const hz = H * HORIZON, g = m2.createLinearGradient(0, hz, 0, L.y0 + 30);
       g.addColorStop(0, 'rgba(30,38,54,0)'); g.addColorStop(.8, 'rgba(30,38,54,.12)'); g.addColorStop(1, 'rgba(30,38,54,0)');

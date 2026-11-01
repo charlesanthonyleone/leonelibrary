@@ -14,6 +14,8 @@ import { Continue, Remix, StudioHub, Translate } from './pages/Studio';
 import { Calculator, PublishingHome, Royalties, Submit } from './pages/Publishing';
 import { Classroom, Community, NotFound, Rights, Storefront } from './pages/Misc';
 import './styles.css';
+import './room.css';
+import Plans from './pages/Plans';
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -43,6 +45,7 @@ function App() {
           <Route path="/read" element={<Reader />} />
           <Route path="/design" element={<Design />} />
           <Route path="/shelf" element={<Shelf />} />
+          <Route path="/plans" element={<Plans />} />
           <Route path="/studio" element={<StudioHub />} />
           <Route path="/studio/translate" element={<Translate />} />
           <Route path="/studio/remix" element={<Remix />} />

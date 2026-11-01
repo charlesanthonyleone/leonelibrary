@@ -13,7 +13,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* scene (from RecordOfLaw) */
 .scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: #02050b; }
-.scene canvas, .scene-top { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+.scene canvas, .scene-top { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; }
 .scene-top { z-index: 9999; pointer-events: none; }
 .scene-fallback { position: fixed; inset: 0; display: none; background: radial-gradient(60% 18% at 70% 50%, rgba(150,170,200,.10), transparent 70%), linear-gradient(to bottom, #010309 0%, #050b16 48%, #0c1522 50%, #03070d 62%, #010204 100%); }
 .scene-fallback.on { display: block; }

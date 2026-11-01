@@ -19,7 +19,7 @@ export function Nav() {
       </Link>
       <button className="nav-burger" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
       <nav className={open ? 'open' : ''}>
-        {L('/library', 'Library')}{L('/shelf', 'My Shelf')}{L('/studio', 'Studio')}{L('/publishing', 'Publishing')}{L('/classroom', 'Classroom')}{L('/community', 'Community')}
+        {L('/library', 'Library')}{L('/shelf', 'My Shelf')}{L('/studio', 'Studio')}{L('/publishing', 'Publishing')}{L('/plans', 'Plans')}
       </nav>
     </header>
   );
@@ -34,6 +34,7 @@ export function Footer() {
           <div><h5>Read</h5><Link to="/library">The Library</Link><Link to="/shelf">My Shelf</Link><Link to="/design">Design</Link></div>
           <div><h5>Create</h5><Link to="/studio/translate">Translate</Link><Link to="/studio/remix">Remix</Link><Link to="/studio/continue">Continue</Link></div>
           <div><h5>Publish</h5><Link to="/publishing">Leone Publishing</Link><Link to="/publishing/calculator">Fee calculator</Link><Link to="/publishing/submit">Submit a book</Link><Link to="/publishing/royalties">Royalties</Link></div>
+          <div><h5>More</h5><Link to="/plans">Plans</Link><Link to="/classroom">Classroom</Link><Link to="/community">Community</Link><Link to="/rights">Rights</Link></div>
         </div>
       </div>
       <p className="muted tiny center">Book data: Project Gutenberg via Gutendex, and Wikisource. Leone Library indexes US public-domain works only (first published 1930 or earlier). Rights outside the US differ.</p>
