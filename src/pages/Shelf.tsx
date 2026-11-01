@@ -9,6 +9,13 @@ import type { Pick } from '../three/engine';
 import type { Lib3DHandle } from '../three/Library3D';
 import { playAmbience, stopAmbience, type Amb } from '../three/ambience';
 import { Soon } from '../components/ui';
+import BookHUD from '../components/BookHUD';
+import ReaderTab from '../components/ReaderTab';
+import { DEFAULT_LOOK, type ReaderLook } from '../lib/reader3d';
+import type { ReadState } from '../three/reading';
+import { getText, parseText, type Chapter } from '../lib/books';
+import { save, useStored, type Edit } from '../lib/store';
+import { logReading } from './Features';
 
 const Library3D = lazy(() => import('../three/Library3D'));
 
@@ -33,7 +40,7 @@ const Lock = () => <span className="lock" aria-label="Editor plan">🔒</span>;
 const CAMS: [string, Layout['cam']][] = [['Front', { az: 0, el: .08, dist: 2.7 }], ['Left', { az: -.75, el: .15, dist: 2.9 }], ['Right', { az: .7, el: .15, dist: 2.9 }], ['Close', { az: -.2, el: .05, dist: 1.5 }], ['Wide', { az: -.45, el: .22, dist: 5 }]];
 export const ambFor = (l: Layout): Amb => l.weather === 'rain' ? 'rain' : l.setting === 'outdoor' && l.view === 'meadow' ? 'falls' : l.view === 'snow' ? 'wind' : l.view === 'night' ? 'night' : 'room';
 
-type Tab = 'room' | 'shelves' | 'books' | 'decor' | 'light' | 'code' | 'ai';
+type Tab = 'room' | 'shelves' | 'books' | 'decor' | 'light' | 'reader' | 'code' | 'ai';
 
 export default function Shelf() {
   const [shelf] = useShelf(); const [projects] = useProjects(); const [plan, setPlan] = usePlan(); const pro = plan === 'editor-demo';
@@ -48,6 +55,36 @@ export default function Shelf() {
   useEffect(() => { setDraft({ css: L.css, html: L.html }); setSel(null); }, [L.id]);
   useEffect(() => { if (view.sound) playAmbience(ambFor(view)); else stopAmbience(); return () => stopAmbience(); }, [view.sound, ambFor(view)]);
   useEffect(() => { const k = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? R.redo() : R.undo(); } }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); });
+  // ------------------------------------------------ reading a book in the room
+  const [lookRaw, setLook] = useStored<ReaderLook>('reader3d', DEFAULT_LOOK); const look = useMemo(() => ({ ...DEFAULT_LOOK, ...lookRaw }), [lookRaw]);
+  const [rs, setRs] = useState<ReadState | null>(null); const [chs, setChs] = useState<Chapter[] | null>(null); const [fs, setFs] = useState(false);
+  const roomRef = useRef<HTMLDivElement>(null); const active = useRef(Date.now());
+  const openBook = (id: string) => {
+    if (!lib.current?.open(id, look)) return; setChs(null); active.current = Date.now();
+    const n = Number(id); if (!Number.isFinite(n)) { lib.current.setText(null, 'This book has no text attached yet.'); return; }
+    getText(n).then(raw => { const ed = load<Edit[]>(`edits:${n}`, []);
+      const c = parseText(raw).chapters.map((c, ci) => ({ ...c, paras: c.paras.map((p, pi) => ed.find(e => e.chapter === ci && e.para === pi)?.text ?? p) }));
+      setChs(c); lib.current?.setText(c, '', load<{ ch: number; para: number } | null>(`bookmark:${n}`, null)); })
+      .catch(() => lib.current?.setText(null, 'The text could not be loaded right now. Check your connection, or open it in the classic reader.'));
+  };
+  const closeBook = () => lib.current?.close();
+  useEffect(() => { lib.current?.setLook(look); }, [look]);
+  useEffect(() => { if (!rs || rs.stage !== 'reading' || !rs.anchor || !chs) return; const n = Number(rs.id);
+    save(`bookmark:${n}`, rs.anchor); save(`progress:${n}`, { chapter: Math.max(0, rs.anchor.ch), pct: 0, at: Date.now() }); active.current = Date.now(); }, [rs?.spread, rs?.focus, chs]);
+  const reading = !!rs;
+  useEffect(() => { if (!reading) return; const t = setInterval(() => { if (document.visibilityState === 'visible' && (Date.now() - active.current < 120000 || window.speechSynthesis?.speaking)) logReading(1); }, 60000); return () => clearInterval(t); }, [reading]);
+  const toggleFs = () => { const el = roomRef.current; if (!el) return;
+    if (document.fullscreenElement) { void document.exitFullscreen(); return; }
+    if (fs) { setFs(false); return; }
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => setFs(true)); else setFs(true); };
+  useEffect(() => { const f = () => setFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); }, []);
+  useEffect(() => { const k = (e: KeyboardEvent) => { const tg = e.target as HTMLElement; if (tg?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (reading) { if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); lib.current?.next(); active.current = Date.now(); }
+        else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); lib.current?.prev(); active.current = Date.now(); }
+        else if (e.key === 'Escape' && !document.fullscreenElement) { if (fs) setFs(false); else closeBook(); } }
+      else if (e.key === 'Escape' && fs) setFs(false);
+      if (e.key === 'f' && !e.metaKey && !e.ctrlKey) toggleFs(); };
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); });
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2600); };
   const gate = (what: string, fn: () => void) => (pro ? fn() : setUpsell(what));
   const patch = (p: Partial<Layout>, coalesce = false) => R.set({ ...L, ...p, preset: p.preset ?? 'custom' }, coalesce);
@@ -97,27 +134,29 @@ export default function Shelf() {
 
       <div className="shelf-layout">
         <div className="room-col">
-          <div id="lib-room" className="lib-room">
+          <div id="lib-room" ref={roomRef} className={`lib-room ${fs ? 'pseudo-fs' : ''} ${reading ? 'reading' : ''}`}>
             {gl ? <Suspense fallback={<div className="lib3d"><div className="lib3d-load"><span />Lighting the room…</div></div>}>
               <Library3D ref={lib} layout={view} mode={shared ? 'view' : mode} tool={tool} editable={!shared}
-                onBooks={b => (pro || true) && patch({ books: b, preset: L.preset })} onItem={(it, f) => setItem(it, !f)} onSelect={p => { setSel(p); if (p?.type === 'book') setTab('books'); if (p?.type === 'item') setTab('decor'); }}
-                onCam={c => R.set({ ...L, cam: c }, true)} />
+                onBooks={b => (pro || true) && patch({ books: b, preset: L.preset })} onItem={(it, f) => setItem(it, !f)} onSelect={p => { if (mode === 'view' && p?.type === 'book') return; setSel(p); if (p?.type === 'book') setTab('books'); if (p?.type === 'item') setTab('decor'); }}
+                onCam={c => !reading && !shared && R.set({ ...L, cam: c }, true)} onOpen={openBook} onRead={setRs} />
             </Suspense> : <Room cfg={fromPreset(view.setting === 'outdoor' ? (view.view === 'snow' ? 'snow' : 'meadow') : 'study')} books={view.books} />}
             {scoped && <style>{scoped}</style>}
             {html && <div className="room-custom" dangerouslySetInnerHTML={{ __html: html }} />}
-            {!shared && <div className="lib-tools">
+            {rs && <BookHUD lib={lib.current} st={rs} title={view.books.find(b => String(b.id) === rs.id)?.title ?? ''} chapters={chs} fs={fs || !!document.fullscreenElement} onFs={toggleFs} onClose={closeBook} />}
+            {!shared && !reading && <div className="lib-tools">
               <div className="seg">{([['view', '🖐 Orbit'], ['books', '📚 Arrange books'], ['decor', '🪴 Place decor']] as const).map(([m, n]) => <button key={m} className={mode === m ? 'on' : ''} onClick={() => (m === 'decor' && !pro ? setUpsell('Placing decorations') : setMode(m))}>{n}{m === 'decor' && !pro && <Lock />}</button>)}</div>
               {mode === 'decor' && <div className="seg">{([['translate', 'Move'], ['rotate', 'Rotate'], ['scale', 'Scale']] as const).map(([m, n]) => <button key={m} className={tool === m ? 'on' : ''} onClick={() => setTool(m)}>{n}</button>)}</div>}
             </div>}
-            <div className="lib-cams">{CAMS.map(([n, c]) => <button key={n} onClick={() => { lib.current?.setCam(c); if (!shared) R.set({ ...L, cam: c }, true); }}>{n}</button>)}
-              <button className={view.sound ? 'on' : ''} onClick={() => shared ? null : patch({ sound: !L.sound, preset: L.preset })} title="Ambient sound, generated in your browser">{view.sound ? '🔊' : '🔈'} Sound</button></div>
-            <div className="lib-hint">{mode === 'books' ? 'Drag a book to any shelf or position' : mode === 'decor' ? 'Click an object, then drag the handles. It settles onto whatever is below' : 'Drag to orbit · scroll to zoom · click a book or object to edit it'}</div>
+            {!reading && <><div className="lib-cams">{CAMS.map(([n, c]) => <button key={n} onClick={() => { lib.current?.setCam(c); if (!shared) R.set({ ...L, cam: c }, true); }}>{n}</button>)}
+              <button className={view.sound ? 'on' : ''} onClick={() => shared ? null : patch({ sound: !L.sound, preset: L.preset })} title="Ambient sound, generated in your browser">{view.sound ? '🔊' : '🔈'} Sound</button>
+              <button onClick={toggleFs} title="Full screen (F)">{fs ? '⤡ Exit' : '⤢ Expand'}</button></div>
+            <div className="lib-hint">{mode === 'books' ? 'Drag a book to any shelf or position' : mode === 'decor' ? 'Click an object, then drag the handles. It settles onto whatever is below' : 'Click a book to take it off the shelf and read · drag to orbit · scroll to zoom'}</div></>}
           </div>
           {toast && <div className="toast">{toast}</div>}
         </div>
 
         {!shared && <aside className="studio-panel glass">
-          <div className="tabs wrap" role="tablist"><T id="room">Room</T><T id="shelves">Shelves</T><T id="books">Books</T><T id="decor">Decor</T><T id="light">Light</T><T id="code">HTML/CSS</T><T id="ai">AI</T></div>
+          <div className="tabs wrap" role="tablist"><T id="room">Room</T><T id="shelves">Shelves</T><T id="books">Books</T><T id="decor">Decor</T><T id="light">Light</T><T id="reader">Reader</T><T id="code">HTML/CSS</T><T id="ai">AI</T></div>
 
           {tab === 'room' && <div className="ctls">
             <div className="lbl">Start from a room</div>
@@ -187,6 +226,7 @@ export default function Shelf() {
             <p className="tiny muted">Sound is synthesised live in your browser (falls, rain, wind, crickets, a crackling room). No audio is downloaded.</p>
           </div>}
 
+          {tab === 'reader' && <ReaderTab look={look} set={setLook} pro={pro} upsell={setUpsell} reading={reading} onPreview={() => { const b = view.books[0]; if (b) openBook(String(b.id)); }} />}
           {tab === 'code' && <div className={`ctls ${pro ? '' : 'gated'}`}>
             <p className="small muted">Layer your own HTML and CSS over the room: <code>#lib-room</code>, <code>.lib3d-canvas</code> (try a <code>filter</code>), <code>.room-custom</code>. Scoped to this room; scripts, handlers, iframes, forms and external URLs are stripped.</p>
             <div className="lbl">CSS</div>

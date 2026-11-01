@@ -12,12 +12,15 @@ const loadHdr = (n: string) => { let p = hdrCache.get(n); if (!p) { p = new RGBE
 
 const PLINTH = .08, BOARD = .025;
 import { caseHeight } from '../lib/layout';
+import { Reading, type ReadState } from './reading';
+import type { ReaderLook } from '../lib/reader3d';
 export { caseHeight };
 
 type Upd = (t: number, dt: number) => void;
 export type Pick = { type: 'book'; id: string } | { type: 'item'; id: string } | null;
 export type EngineEvents = {
   onBooks: (books: BookSlot[]) => void; onItem: (it: Item, final: boolean) => void; onSelect: (p: Pick) => void; onCam: (c: Layout['cam']) => void; onReady: () => void;
+  onOpen?: (id: string) => void; onRead?: (s: ReadState | null) => void;
 };
 
 export class Engine {
@@ -29,6 +32,7 @@ export class Engine {
   keys: Record<string, string> = {}; clock = new THREE.Clock(); raf = 0; visible = true; sel: Pick = null; envName = ''; bgName = '';
   ray = new THREE.Raycaster(); ptr = new THREE.Vector2(); drag: { mesh: THREE.Object3D; slot: BookSlot; moved: boolean; x0: number; y0: number } | null = null;
   ro: ResizeObserver; io: IntersectionObserver; selBox = new THREE.BoxHelper(new THREE.Object3D(), 0xf3d27a);
+  reading: Reading | null = null; click: { x: number; y: number; id: string } | null = null;
 
   constructor(public host: HTMLElement, ev: EngineEvents) {
     this.ev = ev;
@@ -50,6 +54,7 @@ export class Engine {
     this.selBox.visible = false;
     const el = r.domElement;
     el.addEventListener('pointerdown', this.down); el.addEventListener('pointermove', this.move); window.addEventListener('pointerup', this.up);
+    el.addEventListener('wheel', ev => this.reading?.wheel(ev), { passive: false }); el.addEventListener('dblclick', () => this.reading?.fit());
     this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(host);
     this.io = new IntersectionObserver(es => { this.visible = es[0].isIntersecting; }); this.io.observe(host);
     this.resize(); this.loop();
@@ -61,9 +66,12 @@ export class Engine {
     if (!this.visible || document.hidden) return;
     const dt = Math.min(this.clock.getDelta(), .05), t = this.clock.elapsedTime;
     for (const u of [...this.worldUpd, ...this.itemUpd, ...this.fxUpd]) u(t, dt);
-    this.orbit.update(); if (this.selBox.visible) this.selBox.update();
+    if (this.reading) this.reading.update(dt, t); else this.orbit.update();
+    if (this.selBox.visible) this.selBox.update();
     this.r.render(this.scene, this.cam);
   };
+  /** Advance the reading animations by s seconds in one go (tests, slow software renderers). */
+  step(s: number) { for (let t = 0; t < s; t += .05) { this.clock.elapsedTime += .05; this.reading?.update(.05, this.clock.elapsedTime); } this.r.render(this.scene, this.cam); }
   snapshot(): string { this.r.render(this.scene, this.cam); return this.r.domElement.toDataURL('image/jpeg', .9); }
 
   setMode(m: 'view' | 'books' | 'decor') { this.mode = m; if (m !== 'decor') this.tc.detach(); this.r.domElement.style.cursor = m === 'books' ? 'grab' : ''; }
@@ -328,7 +336,7 @@ export class Engine {
     const sp = new THREE.Mesh(sg, spineM); sp.position.set(0, h / 2, d / 2 - .002); sp.castShadow = true; g.add(sp);
     // page block, inset from head, tail and fore-edge
     const pg = new THREE.Mesh(new THREE.BoxGeometry(t - board * 2, h - .008, d - .006), pageM); pg.position.set(0, h / 2, -.002); pg.receiveShadow = true; g.add(pg);
-    g.userData = { book: String(b.id), w: t };
+    g.userData = { book: String(b.id), w: t, h, d };
     g.traverse(o => { o.userData.book = String(b.id); });
     return g;
   }
@@ -497,7 +505,19 @@ export class Engine {
     const rc = this.r.domElement.getBoundingClientRect(); this.ptr.set(((e.clientX - rc.left) / rc.width) * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
     this.ray.setFromCamera(this.ptr, this.cam); return this.ray.intersectObjects([this.booksG, this.itemsG], true)[0];
   }
+  /** Lift a book off the shelf and open it in the room. */
+  openBook(id: string, look: ReaderLook) {
+    if (this.reading) return this.reading;
+    const mesh = this.booksG.children.find(c => c.userData.book === id), slot = this.L.books.find(b => String(b.id) === id); if (!mesh || !slot) return null;
+    this.select(null); this.selBox.visible = false;
+    this.reading = new Reading(this, mesh, { title: slot.title, author: slot.author, color: slot.color }, look, s => this.ev.onRead?.(s));
+    this.r.setPixelRatio(Math.min(devicePixelRatio, 2)); this.resize();
+    return this.reading;
+  }
+  closeBook(done?: () => void) { const R = this.reading; if (!R) return; R.close(() => { this.reading = null; this.r.setPixelRatio(Math.min(devicePixelRatio, 1.75)); this.resize(); this.r.domElement.style.cursor = ''; done?.(); }); }
   down = (e: PointerEvent) => {
+    if (this.reading) { this.reading.down(e); return; }
+    if (this.mode === 'view' && this.ev.onOpen) { const h = this.pickAt(e); if (h?.object.userData.book) this.click = { x: e.clientX, y: e.clientY, id: h.object.userData.book }; }
     if (!this.editable || (this.tc as any).dragging || (this.tc as any).axis) return;
     const hit = this.pickAt(e); if (!hit) { if (this.mode !== 'view') this.select(null); return; }
     const ud = hit.object.userData;
@@ -510,12 +530,17 @@ export class Engine {
     else if (ud.item) this.select({ type: 'item', id: ud.item });
   };
   move = (e: PointerEvent) => {
+    if (this.reading) { this.reading.move(e); return; }
+    if (this.mode === 'view' && !this.drag && this.ev.onOpen && e.pointerType === 'mouse' && !e.buttons) { const h = this.pickAt(e); this.r.domElement.style.cursor = h?.object.userData.book ? 'pointer' : ''; }
     const d = this.drag; if (!d) return; if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 4) d.moved = true; if (!d.moved) return;
     const rc = this.r.domElement.getBoundingClientRect(); this.ptr.set(((e.clientX - rc.left) / rc.width) * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
     this.ray.setFromCamera(this.ptr, this.cam); const p = new THREE.Vector3();
     if (this.ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -this.L.depth / 2), p)) { d.mesh.position.set(p.x, p.y - .1, this.L.depth / 2 + .02); d.mesh.rotation.z = 0; }
   };
-  up = () => {
+  up = (e: PointerEvent) => {
+    if (this.reading) { this.reading.up(e); return; }
+    const c = this.click; this.click = null;
+    if (c && this.mode === 'view' && Math.hypot(e.clientX - c.x, e.clientY - c.y) < 6) { this.ev.onOpen?.(c.id); return; }
     const d = this.drag; if (!d) return; this.drag = null; this.orbit.enabled = true; this.r.domElement.style.cursor = this.mode === 'books' ? 'grab' : '';
     if (!d.moved) return;
     const L = this.L, y = d.mesh.position.y + .1, x = d.mesh.position.x;
