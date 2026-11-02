@@ -8,7 +8,7 @@ import { logReading, shareNotesLink } from './Features';
 import QuoteCard from '../components/QuoteCard';
 
 type Bookmark = { id: string; chapter: number; para: number; label: string; at: number };
-type A11y = { dyslexia: boolean; contrast: boolean; spacing: number; words: number; sr: boolean; spread: 'auto' | 'one' | 'two'; motion: 'flip' | 'slide' | 'none' };
+type A11y = { dyslexia: boolean; contrast: boolean; spacing: number; words: number; sr: boolean; spread: 'auto' | 'one' | 'two'; motion: 'flip' | 'slide' | 'none'; ruler?: boolean };
 const A11Y0: A11y = { dyslexia: false, contrast: false, spacing: 0, words: 0, sr: false, spread: 'auto', motion: 'slide' };
 
 function marked(text: string, hs: Highlight[]) {
@@ -31,7 +31,7 @@ export default function Reader() {
   const [hl, setHl] = useStored<Highlight[]>(`highlights:${id}`, []);
   const [edits, setEdits] = useStored<Edit[]>(`edits:${id}`, []);
   const [marks, setMarks] = useStored<Bookmark[]>(`bookmarks:${id}`, []);
-  const [panel, setPanel] = useState<'none' | 'toc' | 'aa' | 'design' | 'notes' | 'voice' | 'marks'>('none');
+  const [panel, setPanel] = useState<'none' | 'toc' | 'aa' | 'design' | 'notes' | 'voice' | 'marks' | 'find'>('none'); const [fq, setFq] = useState('');
   const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
   const [editing, setEditing] = useState(false); const [card, setCard] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -91,7 +91,8 @@ export default function Reader() {
   useEffect(() => { const k = (e: KeyboardEvent) => { if (editing || (e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable]')) return;
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); flip(e.shiftKey && e.key === ' ' ? -1 : 1); }
       else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); flip(-1); }
-      else if (e.key === 'Escape') setPanel('none'); };
+      else if (e.key === 'Escape') setPanel('none');
+      else if (e.key === '/' ) { e.preventDefault(); setPanel('find'); } };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); });
   const swipe = useRef<{ x: number; y: number; t: number } | null>(null);
 
@@ -134,6 +135,7 @@ export default function Reader() {
         <Link to={`/book?id=${id}`} className="rb-title">← {book ? book.title.split(/[;:]/)[0] : '…'}</Link>
         <div className="rb-actions">
           <button onClick={() => setPanel(panel === 'toc' ? 'none' : 'toc')} className={panel === 'toc' ? 'on' : ''}>Contents</button>
+          <button onClick={() => setPanel(panel === 'find' ? 'none' : 'find')} className={panel === 'find' ? 'on' : ''} aria-label="Find in this book">Find</button>
           <button onClick={() => setPanel(panel === 'aa' ? 'none' : 'aa')} className={panel === 'aa' ? 'on' : ''} aria-label="Text and accessibility settings">Aa</button>
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
@@ -147,9 +149,11 @@ export default function Reader() {
       </div>
       {panel !== 'none' && <aside className="reader-panel glass" aria-label="Reader panel">
         {panel === 'toc' && <><h4>Contents</h4><ol className="toc">{chapters?.map((c, i) => <li key={i}><button className={i === ch ? 'on' : ''} onClick={() => goCh(i)}>{c.title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></>}
+        {panel === 'find' && <FindPanel chapters={chapters ?? []} q={fq} setQ={setFq} go={goCh} />}
         {panel === 'aa' && <><h4>Text &amp; accessibility</h4>
           <label className="chk"><input type="checkbox" checked={ax.dyslexia} onChange={e => setA({ ...ax, dyslexia: e.target.checked })} /> Dyslexia-friendly font</label>
           <label className="chk"><input type="checkbox" checked={ax.contrast} onChange={e => setA({ ...ax, contrast: e.target.checked })} /> High contrast</label>
+          <label className="chk"><input type="checkbox" checked={!!ax.ruler} onChange={e => setA({ ...ax, ruler: e.target.checked })} /> Reading ruler (a band that follows your pointer)</label>
           <label className="chk"><input type="checkbox" checked={ax.sr} onChange={e => setA({ ...ax, sr: e.target.checked })} /> Screen-reader mode (continuous text)</label>
           <label className="lbl">Letter &amp; line spacing: {ax.spacing}</label><input type="range" min={0} max={5} value={ax.spacing} onChange={e => setA({ ...ax, spacing: +e.target.value })} />
           <label className="lbl">Word spacing: {ax.words}</label><input type="range" min={0} max={5} value={ax.words} onChange={e => setA({ ...ax, words: +e.target.value })} />
@@ -169,6 +173,7 @@ export default function Reader() {
       </aside>}
       <div className={`book-spread ${two ? 'two' : 'one'}`}>
         {paged && <button className="tap prev" aria-label="Previous page" onClick={() => flip(-1)} />}
+        {ax.ruler && <Ruler />}
         <article id="reader-text" className={`page-paper ${turn && motion !== 'none' ? `turn-${motion}-${turn}` : ''}`} lang={book?.languages[0]}>
           {!chapters && <p className="loading"><span className="spin" /> Opening the book…</p>}
           {chapter && <div className="pg-view" ref={viewRef}
@@ -201,3 +206,23 @@ export default function Reader() {
   );
 }
 function gap(two: boolean) { return two ? 64 : 0; }
+
+function FindPanel({ chapters, q, setQ, go }: { chapters: Chapter[]; q: string; setQ: (s: string) => void; go: (n: number, at?: number) => void }) {
+  const res = useMemo(() => { const n = q.trim().toLowerCase(); if (n.length < 2) return [] as { c: number; p: number; s: string }[];
+    const out: { c: number; p: number; s: string }[] = [];
+    chapters.forEach((c, ci) => c.paras.forEach((p, pi) => { if (out.length >= 200) return; const at = p.toLowerCase().indexOf(n); if (at < 0) return; const st = Math.max(0, at - 50);
+      out.push({ c: ci, p: pi, s: (st ? '…' : '') + p.slice(st, at + n.length + 70) + '…' }); }));
+    return out; }, [q, chapters]);
+  const n = q.trim().toLowerCase();
+  const mk = (s: string) => { const i = s.toLowerCase().indexOf(n); return i < 0 ? s : <>{s.slice(0, i)}<mark>{s.slice(i, i + n.length)}</mark>{s.slice(i + n.length)}</>; };
+  return <><h4>Find in this book</h4>
+    <input className="fx-in" autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Word or phrase" aria-label="Find in this book" />
+    <p className="small muted" role="status">{n.length < 2 ? 'Type at least two letters. Press / to open this panel.' : `${res.length >= 200 ? '200+' : res.length} match${res.length === 1 ? '' : 'es'}`}</p>
+    <ol className="find-list">{res.map((r, i) => <li key={i}><button onClick={() => go(r.c, r.p)}><span className="small muted">{chapters[r.c].title}</span><br />{mk(r.s)}</button></li>)}</ol></>;
+}
+
+function Ruler() {
+  const [y, setY] = useState(-100);
+  useEffect(() => { const m = (e: PointerEvent) => setY(e.clientY); window.addEventListener('pointermove', m); return () => window.removeEventListener('pointermove', m); }, []);
+  return <div className="read-ruler" aria-hidden="true" style={{ top: y - 22 }} />;
+}

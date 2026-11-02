@@ -342,3 +342,17 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
 .rb-link{padding:.35rem .6rem;border-radius:8px;color:inherit;text-decoration:none}.rb-link:hover{background:rgba(255,255,255,.08)}
 :focus-visible{outline:3px solid var(--gold,#d9b25f);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.find-list{list-style:none;padding:0;margin:.5rem 0;max-height:60vh;overflow:auto}
+.find-list button{all:unset;cursor:pointer;display:block;padding:.45rem .3rem;border-bottom:1px solid rgba(255,255,255,.08);font-size:.85rem;line-height:1.35}
+.find-list button:hover,.find-list button:focus-visible{background:rgba(212,175,55,.12)}
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.dna-compare{margin:1.5rem 0}.cmp-pick{position:relative;max-width:28rem}
+.cmp-opts{list-style:none;padding:0;margin:.3rem 0;background:rgba(10,14,30,.95);border-radius:10px}
+.cmp-opts button{all:unset;cursor:pointer;display:block;padding:.45rem .7rem;width:100%;box-sizing:border-box}
+.cmp-opts button:hover,.cmp-opts button:focus-visible{background:rgba(212,175,55,.15)}
+.cmp-table{border-collapse:collapse;margin:.5rem 0 1rem;min-width:min(100%,34rem)}
+.cmp-table th,.cmp-table td{padding:.4rem .8rem;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}
+.cmp-table thead th{color:#d4af37;font-weight:600}
+.read-ruler{position:fixed;left:0;right:0;height:44px;pointer-events:none;z-index:40;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);border-top:1px solid rgba(212,175,55,.4);border-bottom:1px solid rgba(212,175,55,.4)}

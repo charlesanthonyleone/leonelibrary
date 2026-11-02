@@ -154,6 +154,7 @@ export default function Shelf() {
             <div className="lib-hint">{mode === 'books' ? 'Drag a book to any shelf or position' : mode === 'decor' ? 'Click an object, then drag the handles. It settles onto whatever is below' : 'Click a book to take it off the shelf and read · drag to orbit · scroll to zoom'}</div></>}
           </div>
           {toast && <div className="toast">{toast}</div>}
+          <nav className="sr-only" aria-label="Books in this room (text list)"><ul>{view.books.map(b => <li key={b.id}><Link to={`/read?id=${b.id}`}>{b.title}</Link></li>)}</ul></nav>
         </div>
 
         {!shared && <aside className="studio-panel glass">
