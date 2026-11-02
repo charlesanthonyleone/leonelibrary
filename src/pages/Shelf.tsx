@@ -255,11 +255,11 @@ export default function Shelf() {
         {shelf.map(b => { const p = load<Progress>(`progress:${b.id}`, { chapter: 0, pct: 0, at: 0 });
           return <div className="list-row" key={b.id}><Link to={`/read?id=${b.id}`}><b>{b.title.split(/[;:]/)[0]}</b> <span className="muted">· {b.author}</span></Link><span className="small muted">{p.at ? `Chapter ${p.chapter + 1}` : 'Not started'}</span></div>; })}
       </div>}
-      {projects.length > 0 && <div className="list glass pad"><h3>Studio projects</h3>{projects.map(p => <div className="list-row" key={p.id}><b>{p.title}</b><span className="muted small">{p.kind} of {p.sourceTitle}</span></div>)}</div>}
+      {projects.length > 0 && <div className="list glass pad"><h2 className="h3">Studio projects</h2>{projects.map(p => <div className="list-row" key={p.id}><b>{p.title}</b><span className="muted small">{p.kind} of {p.sourceTitle}</span></div>)}</div>}
       <p className="tiny muted center credits">Textures &amp; HDRI skies: <a href="https://polyhaven.com" target="_blank" rel="noreferrer">Poly Haven</a> (CC0): dark_wood, oak_veneer_01, marble_01, laminate_floor_02, painted_plaster_wall, aerial_grass_rock, rock_face, fabric_pattern_07, lythwood_room, kloofendal_48d_partly_cloudy_puresky, snowy_park_01, satara_night. Rendering by three.js. Painting: Milky Way photo used across the site.</p>
 
       {upsell && <div className="modal-back" onClick={() => setUpsell(null)}><div className="modal glass pad" role="dialog" aria-modal onClick={e => e.stopPropagation()}>
-        <div className="eyebrow">Editor plan</div><h3 className="display sm">{upsell} is an Editor feature</h3>
+        <div className="eyebrow">Editor plan</div><h2 className="h3 display sm">{upsell} is an Editor feature</h2>
         <p className="muted">Every room, material and view, placing and styling every object, multiple saved rooms, plus your own HTML and CSS. Reading and rearranging your books stay free forever.</p>
         <div className="row gap wrap"><Link className="btn gold" to="/plans">See plans</Link><button className="btn ghost" onClick={() => { setPlan('editor-demo'); setUpsell(null); }}>Preview as Editor (demo)</button></div>
       </div></div>}

@@ -11,9 +11,9 @@ export function PublishingHome() {
       <h1 className="display">Print It. Ship It. Own It.</h1>
       <p className="lede">Leone Publishing is the publisher of record for every book made here. Every edition carries the line “Published by Leone Publishing”, and you keep 85–90% of the net royalties.</p>
       <div className="pitch glass pad">
-        <div><h3>The traditional deal</h3><p>A conventional publisher pays an author a royalty that is usually a small share of the cover price and keeps the rest, often in exchange for an advance, editing, marketing and distribution. Terms vary widely by publisher and contract.</p></div>
+        <div><h2 className="h3">The traditional deal</h2><p>A conventional publisher pays an author a royalty that is usually a small share of the cover price and keeps the rest, often in exchange for an advance, editing, marketing and distribution. Terms vary widely by publisher and contract.</p></div>
         <div className="vs">vs</div>
-        <div><h3>Leone</h3><p>You keep <b>90%</b> of net royalties on mostly-original work and <b>85%</b> on public-domain remixes and translations. Net means after print and retailer costs. No upfront fees. You keep your rights.</p></div>
+        <div><h2 className="h3">Leone</h2><p>You keep <b>90%</b> of net royalties on mostly-original work and <b>85%</b> on public-domain remixes and translations. Net means after print and retailer costs. No upfront fees. You keep your rights.</p></div>
       </div>
       <Section eyebrow="How it works" title="From manuscript to bookstore">
         <ol className="how">
@@ -24,17 +24,17 @@ export function PublishingHome() {
         </ol>
       </Section>
       <div className="feature-grid">
-        <div className="feature glass"><h3>IngramSpark</h3><p>Print and ebook distribution to bookstores and libraries. Integration <Soon /></p></div>
-        <div className="feature glass"><h3>Draft2Digital</h3><p>Ebook distribution to major online stores. Integration <Soon /></p></div>
-        <div className="feature glass"><h3>Lulu Print API</h3><p>Print-on-demand paperbacks and hardcovers, shipped direct. Integration <Soon /></p></div>
-        <div className="feature glass"><h3>Amazon KDP</h3><p>KDP has no public upload API, so Amazon listings are reached through partner distribution where the partner allows it.</p></div>
+        <div className="feature glass"><h2 className="h3">IngramSpark</h2><p>Print and ebook distribution to bookstores and libraries. Integration <Soon /></p></div>
+        <div className="feature glass"><h2 className="h3">Draft2Digital</h2><p>Ebook distribution to major online stores. Integration <Soon /></p></div>
+        <div className="feature glass"><h2 className="h3">Lulu Print API</h2><p>Print-on-demand paperbacks and hardcovers, shipped direct. Integration <Soon /></p></div>
+        <div className="feature glass"><h2 className="h3">Amazon KDP</h2><p>KDP has no public upload API, so Amazon listings are reached through partner distribution where the partner allows it.</p></div>
       </div>
       <Section eyebrow="Quality gate" title="Published by Leone means something">
         <div className="feature-grid">
-          <div className="feature glass"><h3>Originality</h3><p>Remixes need meaningful new material, not a find-and-replace. Mostly-original work qualifies for the 10% rate.</p></div>
-          <div className="feature glass"><h3>AI disclosure</h3><p>Every book states which AI tools were used and for what. It goes on the copyright page.</p></div>
-          <div className="feature glass"><h3>Rights check</h3><p>Sources must be US public domain (first published 1930 or earlier). Protected names are flagged.</p></div>
-          <div className="feature glass"><h3>Human review &amp; editing</h3><p>Optional paid add-ons: rights review, copy-edit, developmental edit. <Soon /></p></div>
+          <div className="feature glass"><h2 className="h3">Originality</h2><p>Remixes need meaningful new material, not a find-and-replace. Mostly-original work qualifies for the 10% rate.</p></div>
+          <div className="feature glass"><h2 className="h3">AI disclosure</h2><p>Every book states which AI tools were used and for what. It goes on the copyright page.</p></div>
+          <div className="feature glass"><h2 className="h3">Rights check</h2><p>Sources must be US public domain (first published 1930 or earlier). Protected names are flagged.</p></div>
+          <div className="feature glass"><h2 className="h3">Human review &amp; editing</h2><p>Optional paid add-ons: rights review, copy-edit, developmental edit. <Soon /></p></div>
         </div>
       </Section>
       <div className="row gap wrap center"><Link className="btn gold" to="/publishing/calculator">Fee calculator</Link><Link className="btn ghost" to="/publishing/submit">Submit your book</Link><Link className="btn ghost" to="/publishing/royalties">Royalty dashboard</Link><Link className="btn ghost" to="/storefront">Author storefronts</Link></div>
@@ -183,13 +183,13 @@ export function Royalties() {
         <div className="glass kpi"><span>Units</span><b>{EX_STORES.reduce((a, b) => a + b.u, 0)}</b></div>
       </div>
       <div className="two-col">
-        <div className="glass pad"><h3>Net by month <span className="tiny muted">(example)</span></h3>
+        <div className="glass pad"><h2 className="h3">Net by month <span className="tiny muted">(example)</span></h2>
           <svg viewBox="0 0 360 180" className="chart">{EX_MONTHS.map(([m, v], i) => <g key={m}><rect x={20 + i * 56} y={150 - v / mx * 130} width="34" height={v / mx * 130} rx="4" fill="url(#gg)" /><text x={37 + i * 56} y="168" textAnchor="middle">{m}</text></g>)}
             <defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f0d58e" /><stop offset="1" stopColor="#8a6a2a" /></linearGradient></defs></svg></div>
-        <div className="glass pad"><h3>Sales by store <span className="tiny muted">(example)</span></h3>
+        <div className="glass pad"><h2 className="h3">Sales by store <span className="tiny muted">(example)</span></h2>
           <table className="tbl"><thead><tr><th>Store</th><th>Units</th><th>Net</th></tr></thead><tbody>{EX_STORES.map(s => <tr key={s.s}><td>{s.s}</td><td>{s.u}</td><td>{money(s.gross)}</td></tr>)}</tbody></table></div>
       </div>
-      <div className="glass pad"><h3>Payouts <span className="tiny muted">(example)</span></h3>
+      <div className="glass pad"><h2 className="h3">Payouts <span className="tiny muted">(example)</span></h2>
         <table className="tbl"><thead><tr><th>Period</th><th>Title</th><th>Net</th><th>Fee</th><th>Paid</th><th>Status</th></tr></thead><tbody>
           <tr><td>Sep 2026</td><td>White Nights (modern translation)</td><td>{money(1362)}</td><td>15%</td><td>{money(1157.7)}</td><td>Paid</td></tr>
           <tr><td>Sep 2026</td><td>The Lighthouse Keeper (original)</td><td>{money(980)}</td><td>10%</td><td>{money(882)}</td><td>Paid</td></tr>

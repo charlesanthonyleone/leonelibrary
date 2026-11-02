@@ -130,7 +130,7 @@ export default function Reader() {
   const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : ax.motion;
   return (
     <div className={`reader paged ${d.dropcap ? 'dropcap' : ''} ${d.indent ? 'indent' : ''} ${d.ornament ? 'orn' : ''} ${ax.contrast ? 'hc' : ''} ${paged ? '' : 'flow'}`} style={style} onMouseUp={onUp}>
-      <a href="#reader-text" className="skip">Skip to text</a>
+      <a href="#reader-text" className="skip">Skip to text</a><h1 className="sr-only">{book?.title ?? 'Reader'}</h1>
       <div className="reader-bar glass" role="toolbar" aria-label="Reader tools">
         <Link to={`/book?id=${id}`} className="rb-title">← {book ? book.title.split(/[;:]/)[0] : '…'}</Link>
         <div className="rb-actions">
@@ -145,7 +145,7 @@ export default function Reader() {
           <button onClick={() => { setEditing(!editing); if (editing && panel === 'design') setPanel('none'); }} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
           {editing && <button onClick={() => setPanel(panel === 'design' ? 'none' : 'design')} className={panel === 'design' ? 'on' : ''}>Design</button>}
         </div>
-        <div className="rb-progress" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
+        <div className="rb-progress" role="progressbar" aria-label="Progress through the book" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
       </div>
       {panel !== 'none' && <aside className="reader-panel glass" aria-label="Reader panel">
         {panel === 'toc' && <><h4>Contents</h4><ol className="toc">{chapters?.map((c, i) => <li key={i}><button className={i === ch ? 'on' : ''} onClick={() => goCh(i)}>{c.title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></>}
@@ -155,10 +155,10 @@ export default function Reader() {
           <label className="chk"><input type="checkbox" checked={ax.contrast} onChange={e => setA({ ...ax, contrast: e.target.checked })} /> High contrast</label>
           <label className="chk"><input type="checkbox" checked={!!ax.ruler} onChange={e => setA({ ...ax, ruler: e.target.checked })} /> Reading ruler (a band that follows your pointer)</label>
           <label className="chk"><input type="checkbox" checked={ax.sr} onChange={e => setA({ ...ax, sr: e.target.checked })} /> Screen-reader mode (continuous text)</label>
-          <label className="lbl">Letter &amp; line spacing: {ax.spacing}</label><input type="range" min={0} max={5} value={ax.spacing} onChange={e => setA({ ...ax, spacing: +e.target.value })} />
-          <label className="lbl">Word spacing: {ax.words}</label><input type="range" min={0} max={5} value={ax.words} onChange={e => setA({ ...ax, words: +e.target.value })} />
-          <label className="lbl">Pages</label><select className="fx-in" value={ax.spread} onChange={e => setA({ ...ax, spread: e.target.value as A11y['spread'] })}><option value="auto">Automatic</option><option value="one">Single page</option><option value="two">Two-page spread</option></select>
-          <label className="lbl">Page turn</label><select className="fx-in" value={ax.motion} onChange={e => setA({ ...ax, motion: e.target.value as A11y['motion'] })}><option value="slide">Slide</option><option value="flip">Page curl</option><option value="none">Instant</option></select>
+          <label className="lbl">Letter &amp; line spacing: {ax.spacing}</label><input aria-label="Letter and line spacing" type="range" min={0} max={5} value={ax.spacing} onChange={e => setA({ ...ax, spacing: +e.target.value })} />
+          <label className="lbl">Word spacing: {ax.words}</label><input aria-label="Word spacing" type="range" min={0} max={5} value={ax.words} onChange={e => setA({ ...ax, words: +e.target.value })} />
+          <label className="lbl">Pages</label><select aria-label="Pages" className="fx-in" value={ax.spread} onChange={e => setA({ ...ax, spread: e.target.value as A11y['spread'] })}><option value="auto">Automatic</option><option value="one">Single page</option><option value="two">Two-page spread</option></select>
+          <label className="lbl">Page turn</label><select aria-label="Page turn" className="fx-in" value={ax.motion} onChange={e => setA({ ...ax, motion: e.target.value as A11y['motion'] })}><option value="slide">Slide</option><option value="flip">Page curl</option><option value="none">Instant</option></select>
           <p className="tiny muted">Font, size, colours and layout are in Design while editing.</p></>}
         {panel === 'design' && <><h4>Design</h4><DesignPanel compact /><Link className="small" to="/design">Full Design studio →</Link></>}
         {panel === 'marks' && <><h4>Bookmarks</h4><button className="btn gold sm" onClick={addMark}>+ Bookmark this page</button>
@@ -167,8 +167,8 @@ export default function Reader() {
           <ul className="notes">{hl.map(h => <li key={h.id}><button className="link" onClick={() => goCh(h.chapter)}>{chapters?.[h.chapter]?.title ?? `Ch. ${h.chapter + 1}`}</button><q>{h.text.slice(0, 160)}</q>{h.note && <p>{h.note}</p>}<button className="x" onClick={() => setHl(hl.filter(x => x.id !== h.id))} aria-label="Remove">×</button></li>)}</ul>
           {hl.length > 0 && <button className="btn ghost sm" onClick={shareNotes}>Share notes as a link</button>}</>}
         {panel === 'voice' && <><h4>Narration</h4><p className="small muted">Reads the chapter aloud with voices installed on your device, turning pages as it goes.</p>
-          <label className="lbl">Voice</label><select className="fx-in" value={voice} onChange={e => setVoice(e.target.value)}><option value="">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</select>
-          <label className="lbl">Speed: {rate.toFixed(2)}×</label><input type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
+          <label className="lbl">Voice</label><select aria-label="Voice" className="fx-in" value={voice} onChange={e => setVoice(e.target.value)}><option value="">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</select>
+          <label className="lbl">Speed: {rate.toFixed(2)}×</label><input aria-label="Speed: ×" type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
           <button className="btn gold sm" onClick={() => speak(Math.max(0, paged ? firstVisible() : para))}>{speaking ? 'Restart from this page' : '▶ Start from this page'}</button></>}
       </aside>}
       <div className={`book-spread ${two ? 'two' : 'one'}`}>

@@ -48,7 +48,7 @@ export default function Home() {
         <div className="eyebrow">Also in the library</div>
         <h2 className="display">Read with people, keep the habit</h2>
         <div className="feature-grid fx-links">
-          {[['/clubs', 'Book clubs', 'One pace, a thread per chapter, no spoilers.'], ['/goals', 'Goals & streaks', 'A daily habit and a yearly recap from your real reading.'], ['/shelves', 'Public shelves', 'Publish your 3D room as a link others can follow.'], ['/marketplace', 'Theme marketplace', 'Rooms and reader palettes, installed in one click.'], ['/studio/collab', 'Co-author a remix', 'Versions, diffs and agreed royalty splits.'], ['/export', 'EPUB & print', 'Download your edition or size a print cover.']].map(([to, t, d]) => <Link key={to} to={to} className="feature glass"><h3>{t}</h3><p>{d}</p></Link>)}
+          {[['/clubs', 'Book clubs', 'One pace, a thread per chapter, no spoilers.'], ['/goals', 'Goals & streaks', 'A daily habit and a yearly recap from your real reading.'], ['/shelves', 'Public shelves', 'Publish your 3D room as a link others can follow.'], ['/marketplace', 'Theme marketplace', 'Rooms and reader palettes, installed in one click.'], ['/studio/collab', 'Co-author a remix', 'Versions, diffs and agreed royalty splits.'], ['/export', 'EPUB & print', 'Download your edition or size a print cover.']].map(([to, t, d]) => <Link key={to} to={to} className="feature glass"><h2 className="h3">{t}</h2><p>{d}</p></Link>)}
         </div>
       </section>
 

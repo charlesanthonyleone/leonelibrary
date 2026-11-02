@@ -9,7 +9,7 @@ export function Provenance({ b }: { b: Book }) {
   const edits = load<Edit[]>(`edits:${b.id}`, []);
   return (
     <div className="prov glass">
-      <h3>Rights &amp; provenance</h3>
+      <h2 className="h3">Rights &amp; provenance</h2>
       <dl>
         <dt>Status</dt><dd><RightsTag r={r} /><div className="small muted">{r.detail}</div></dd>
         <dt>Source</dt><dd>Public-domain transcription, source eBook #{b.id}. Hosted complete on Leone Library and checked for completeness (start and end of text present, every chapter kept).</dd>
@@ -62,7 +62,7 @@ export default function BookPage() {
       <div className="two-col">
         <Provenance b={b} />
         <div className="glass prov">
-          <h3>Editions &amp; series</h3>
+          <h2 className="h3">Editions &amp; series</h2>
           <ul className="editions">
             <li><span className="ed-dot orig" /> <b>Original</b> · {b.title.split(/[;:]/)[0]} ({b.languages.map(langName).join(', ')})</li>
             {derived.map(p => <li key={p.id}><span className="ed-dot" /> <b>{p.kind[0].toUpperCase() + p.kind.slice(1)}</b> · {p.title} <span className="muted small">· draft, awaiting AI engine</span></li>)}

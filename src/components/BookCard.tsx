@@ -12,7 +12,7 @@ export default function BookCard({ b }: { b: Book }) {
   const toggle = () => setShelf(on ? shelf.filter(s => s.id !== b.id) : [...shelf, { id: b.id, title: b.title, author: author(b), cover: c, lang: b.languages[0], addedAt: Date.now() }]);
   return (
     <article className="bookcard">
-      <Link to={`/book?id=${b.id}`} className="bc-cover">
+      <Link to={`/book?id=${b.id}`} className="bc-cover" tabIndex={-1} aria-hidden="true">
         {c && !bad ? <img src={c} alt="" loading="lazy" onError={() => setBad(true)} /> : <GenCover title={b.title} author={author(b)} hue={hueOf(b.title)} />}
         <span className="bc-sheen" />
       </Link>

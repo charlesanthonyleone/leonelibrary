@@ -20,7 +20,7 @@ export default function Plans() {
       <div className="tiers">{TIERS.map(t => (
         <div key={t.name} className={`tier glass ${t.hl ? 'hl' : ''}`}>
           {t.hl && <span className="tier-badge">Most popular</span>}
-          <h3>{t.name}</h3><p className="muted small">{t.tag}</p>
+          <h2 className="h3">{t.name}</h2><p className="muted small">{t.tag}</p>
           <div className="price"><b>{t.price}</b>{t.per && <span>{t.per}</span>}{t.cta === 'soon' && <em className="draft">draft</em>}</div>
           <ul>{t.feats.map(f => <li key={f}>{f}</li>)}</ul>
           {t.cta === 'read' ? <Link className="btn ghost full" to="/library">Start reading</Link> : <button className="btn gold full" disabled>Coming soon</button>}

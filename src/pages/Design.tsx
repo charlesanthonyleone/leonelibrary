@@ -24,7 +24,7 @@ export default function Design() {
       <h1 className="display">Total Creative Control</h1>
       <p className="lede">Every change applies live and is saved on this device. The reader uses these settings for every book.</p>
       <div className="design-layout">
-        <div className="glass pad"><h3>Typography &amp; page</h3><DesignPanel /></div>
+        <div className="glass pad"><h2 className="h3">Typography &amp; page</h2><DesignPanel /></div>
         <div className={`reader preview ${d.dropcap ? 'dropcap' : ''} ${d.indent ? 'indent' : ''} ${d.ornament ? 'orn' : ''}`} style={style}>
           <article className="page-paper"><h2 className="ch-title">Chapter I</h2><div className="prose">{SAMPLE.map((p, i) => <p key={i}>{p}</p>)}</div></article>
           <Link className="btn gold" to="/read?id=1342">Open in the reader</Link>
@@ -32,7 +32,7 @@ export default function Design() {
       </div>
       <div className="design-layout two">
         <div className="glass pad">
-          <h3>Cover designer</h3>
+          <h2 className="h3">Cover designer</h2>
           <label>Title<input value={title} onChange={e => setTitle(e.target.value)} /></label>
           <label>Author<input value={auth} onChange={e => setAuth(e.target.value)} /></label>
           <label>Cloth hue <input type="range" min={0} max={359} value={hue} onChange={e => setHue(+e.target.value)} /></label>
@@ -43,7 +43,7 @@ export default function Design() {
         <div className="cover-stage"><GenCover title={title} author={auth} hue={hue} style={d.coverStyle} className="big" /></div>
       </div>
       <div className="glass pad">
-        <h3>Spine animation</h3>
+        <h2 className="h3">Spine animation</h2>
         <p className="small muted">Glow is {d.spineAnim ? 'on' : 'off'}. Turn it off here or under interface motion in scene settings (⚙).</p>
         <Shelf3D rows={1} books={[{ id: 1342, title, author: auth }, { id: 84, title: 'Frankenstein', author: 'Mary Shelley' }, { id: 2701, title: 'Moby Dick', author: 'Herman Melville' }, { id: 345, title: 'Dracula', author: 'Bram Stoker' }, { id: 11, title: "Alice's Adventures in Wonderland", author: 'Lewis Carroll' }, { id: 1661, title: 'The Adventures of Sherlock Holmes', author: 'Arthur Conan Doyle' }]} />
       </div>

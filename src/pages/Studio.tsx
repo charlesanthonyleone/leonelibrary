@@ -13,10 +13,10 @@ export function StudioHub() {
       <p className="lede">Four tools, one rule: start from a public-domain original, and keep a record of every change.</p>
       <AIStub />
       <div className="feature-grid">
-        <Link to="/studio/translate" className="feature glass hl"><h3>Translate</h3><p>A whole book from the original language, side by side, in faithful, modern or simplified style.</p></Link>
-        <Link to="/studio/remix" className="feature glass"><h3>Remix</h3><p>Make yourself the protagonist. Change the setting, era or voice.</p></Link>
-        <Link to="/studio/continue" className="feature glass"><h3>Continue</h3><p>Write new books in an existing world, with protected names flagged.</p></Link>
-        <Link to="/design" className="feature glass"><h3>Design</h3><p>Fonts, colours, covers, layout and spine animation. Works today.</p></Link>
+        <Link to="/studio/translate" className="feature glass hl"><h2 className="h3">Translate</h2><p>A whole book from the original language, side by side, in faithful, modern or simplified style.</p></Link>
+        <Link to="/studio/remix" className="feature glass"><h2 className="h3">Remix</h2><p>Make yourself the protagonist. Change the setting, era or voice.</p></Link>
+        <Link to="/studio/continue" className="feature glass"><h2 className="h3">Continue</h2><p>Write new books in an existing world, with protected names flagged.</p></Link>
+        <Link to="/design" className="feature glass"><h2 className="h3">Design</h2><p>Fonts, colours, covers, layout and spine animation. Works today.</p></Link>
       </div>
     </div>
   );
@@ -75,10 +75,10 @@ export function Translate() {
       <ol className="steps"><li className="on">Choose the original</li><li className={state === 'ok' ? 'on' : ''}>Set the style</li><li className={run !== 'idle' ? 'on' : ''}>Translate side by side</li><li>Review &amp; publish</li></ol>
       <div className="studio-grid">
         <div className="glass pad">
-          <h3>1 · Original text</h3>
+          <h2 className="h3">1 · Original text</h2>
           <label>Source<select value={srcKey} onChange={e => setSrcKey(e.target.value)}>{srcs.map(s => <option key={s.key} value={s.key}>{s.label} · {langName(s.lang)}</option>)}</select></label>
           <div className="small muted"><>From Leone Library book #{src.id}, complete and public domain worldwide.</> {qBook && src.id === qBook.id && <RightsTag r={rightsFor(qBook)} />}</div>
-          <h3 className="mt">2 · Style</h3>
+          <h2 className="h3 mt">2 · Style</h2>
           <label>Into<select value={target} onChange={e => setTarget(e.target.value)}>{Object.entries(LANGS).filter(([k]) => k !== src.lang).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
           <div className="radio-cards">{(Object.keys(STYLES) as (keyof typeof STYLES)[]).map(k => <button key={k} className={style === k ? 'on' : ''} onClick={() => setStyle(k)}><b>{k[0].toUpperCase() + k.slice(1)}</b><span>{STYLES[k].split(': ')[1]}</span></button>)}</div>
           <label>Scope<select value={scope} onChange={e => setScope(e.target.value)}><option value="whole">Whole book ({words.toLocaleString()} words)</option><option value="chapter">First chapter only</option><option value="sample">Sample (first 14 passages)</option></select></label>
@@ -86,8 +86,8 @@ export function Translate() {
           <button className="btn gold full" disabled={state !== 'ok' || run === 'running'} onClick={go}>{run === 'running' ? 'Contacting engine…' : `Translate ${scope === 'whole' ? 'the whole book' : scope === 'chapter' ? 'chapter one' : 'the sample'}`}</button>
           {saved && <p className="small ok-msg">Saved “{saved}” to your projects. It links back to the original under Editions.</p>}
         </div>
-        <div className="glass pad sbs-wrap">
-          <h3>3 · Side by side</h3>
+        <div className="glass pad sbs-wrap" tabIndex={0} role="region" aria-label="Side-by-side translation">
+          <h2 className="h3">3 · Side by side</h2>
           {run === 'stub' && <AIStub msg="The original is loaded and segmented; translated text will fill the right column when the engine is live." />}
           {state === 'loading' && <p className="muted"><span className="spin" /> Loading the original…</p>}
           {state === 'err' && <p className="muted">Couldn't load this source. Try another.</p>}
@@ -141,7 +141,7 @@ export function Remix() {
           {run && <AIStub msg="Your remix is saved as a project and linked to the original. The full rewrite runs when the engine is live." />}
         </div>
         <div className="glass pad">
-          <h3>Live preview <span className="tiny muted">· name swap runs locally; setting, era and voice need the AI engine</span></h3>
+          <h2 className="h3">Live preview <span className="tiny muted">· name swap runs locally; setting, era and voice need the AI engine</span></h2>
           <div className="prose sample">{swapped.map((p, i) => <p key={i}>{p.split('\u0000').map((s, j) => j % 2 ? <mark key={j}>{s}</mark> : s)}</p>)}</div>
           {(setting || era !== 'Original' || voice !== 'Original') && <p className="small muted">Requested: {[setting && `setting “${setting}”`, era !== 'Original' && `${era} era`, voice !== 'Original' && `${voice.toLowerCase()} voice`].filter(Boolean).join(', ')}.</p>}
         </div>
@@ -185,11 +185,11 @@ export function Continue() {
           {run && <AIStub />}
         </div>
         <div className="glass pad">
-          <h3>Protected-names check</h3>
+          <h2 className="h3">Protected-names check</h2>
           {!flags.length && <p className="ok-msg small">Nothing flagged in your title or premise.</p>}
           <ul className="flags">{flags.map(f => <li key={f.name} className={/PD in the US since|1925 novel is PD/.test(f.why) ? 'info' : 'warn'}><b>{f.name}</b><span>{f.why}</span></li>)}</ul>
           <p className="tiny muted">An automated hint, not legal advice. Optional human rights review is available when you publish. <Soon>Human review: coming soon</Soon></p>
-          {b && <><h3 className="mt">World</h3><p className="small">{b.title} · {author(b)}</p><RightsTag r={rightsFor(b)} /></>}
+          {b && <><h2 className="h3 mt">World</h2><p className="small">{b.title} · {author(b)}</p><RightsTag r={rightsFor(b)} /></>}
         </div>
       </div>
     </div>

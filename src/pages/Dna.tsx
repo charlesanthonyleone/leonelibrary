@@ -24,7 +24,7 @@ export default function DnaPage() {
       <Compare id={id} a={{ b, d }} v={v} vs={vs} set={n => { const p = new URLSearchParams(sp); if (n) p.set('vs', String(n)); else p.delete('vs'); setSp(p); }} />
       <h2>Shape of the book</h2>
       <p className="small muted">Words in each of the {C} chapters. Select a bar to read it.</p>
-      <div className="dna-bars" role="list">{d.chapterWords.map((w, i) => <Link role="listitem" key={i} to={`/read?id=${id}&ch=${i}`} title={`${b.chapters[i].t}: ${w.toLocaleString()} words`} aria-label={`${b.chapters[i].t}, ${w} words`} style={{ height: `${Math.max(3, (w / maxW) * 100)}%` }} />)}</div>
+      <div className="dna-bars">{d.chapterWords.map((w, i) => <Link key={i} to={`/read?id=${id}&ch=${i}`} title={`${b.chapters[i].t}: ${w.toLocaleString()} words`} aria-label={`${b.chapters[i].t}, ${w} words`} style={{ height: `${Math.max(3, (w / maxW) * 100)}%` }} />)}</div>
       {d.names.length > 0 && <><h2>Story map</h2>
         <p className="small muted">The most frequent capitalised names that never appear in lower case, and where in the book each one appears. Darker means more mentions in that chapter.</p>
         <div className="story-map" style={{ gridTemplateColumns: `9rem repeat(${C}, 1fr)` }}>
