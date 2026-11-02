@@ -391,9 +391,15 @@ export default function MountainSky() {
     const flashes: { x: number; y: number; age: number }[] = [];
     const RIP = new Float32Array(16);
     let last = performance.now();
-    const frame = (ms: number) => { try { frameInner(ms); } catch (e) { console.warn('[scene] render failed, using fallback', e); ok = false; cv.style.display = 'none'; fbRef.current?.classList.add('on'); } };
+    // Adaptive pacing: on devices without a fast GPU, draw less often so reading, search and scrolling stay responsive.
+    let slow = false, janky = 0, drawn = 0, cost = 0, lastDraw = 0, gap = 0, iv = 16, prev = 0, n = 0;
+    const frame = (ms: number) => { if (prev && ms - prev > 120 && ms - prev < 1000 && ++janky >= 4) slow = true; // the GPU work lands outside JS timing, so watch the wall clock
+      if (!gap && prev) { iv = iv * .95 + Math.min(200, ms - prev) * .05; if (++n > 90 && iv > 30) gap = 180; } prev = ms;
+      if (gap && ms - lastDraw < gap && painted) { raf = requestAnimationFrame(frame); return; }
+      const c0 = performance.now(); lastDraw = ms; try { frameInner(ms); cost = cost * .9 + (performance.now() - c0) * .1; if (cost > 10) gap = Math.max(gap, Math.min(250, cost * 6));
+        if (++drawn > 6 && cost > 40) slow = true; } catch (e) { console.warn('[scene] render failed, using fallback', e); ok = false; cv.style.display = 'none'; fbRef.current?.classList.add('on'); } };
     const frameInner = (ms: number) => {
-      const dt = Math.min(.05, (ms - last) / 1000); last = ms;
+      const dt = Math.min(gap ? .3 : .05, (ms - last) / 1000); last = ms;
       if (st.ocean) tOcean += dt; if (st.sky) tSky += dt;
       const t = tSky;
       b2.clearRect(0, 0, W, H); t2.clearRect(0, 0, W, H);
@@ -423,7 +429,7 @@ export default function MountainSky() {
         gl.uniform3fv(uMoon, moonDir()); gl.uniform2f(uR, cv.width, cv.height); gl.uniform1f(uT, tOcean); gl.uniform1f(uTS, tSky); gl.uniform4fv(uRip, RIP); gl.drawArrays(gl.TRIANGLES, 0, 3);
       }
       painted = true;
-      raf = (!dead && (st.ocean || st.sky)) ? requestAnimationFrame(frame) : 0; // both off: keep the last still frame
+      raf = (!dead && !slow && (st.ocean || st.sky)) ? requestAnimationFrame(frame) : 0; // too slow to animate here, or both off: keep the last still frame
     };
     function kick() { if (dead) return; if (!raf || !painted) { cancelAnimationFrame(raf); last = performance.now(); raf = requestAnimationFrame(frame); } }
     raf = requestAnimationFrame(frame);
