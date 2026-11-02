@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { assetFetch } from '../lib/assets';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getCatalog, getHostedRaw, type CatEntry, type HostedBook } from '../lib/books';
 
@@ -7,10 +8,10 @@ type Meta = { ids: number[]; stop: string[]; n: number };
 const fold = (w: string) => w.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 const hex = (s: string) => [...s].map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('');
 let metaP: Promise<Meta> | null = null; const shards = new Map<string, Promise<Record<string, number[]>>>();
-const gz = async (u: string) => { const r = await fetch(u); if (!r.ok || !r.body) throw new Error('HTTP ' + r.status); const e = r.headers.get('content-encoding'); return JSON.parse(e?.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text()); };
-const meta = () => (metaP ??= fetch(`${BASE}fts/meta.json`).then(r => r.json()));
+const gz = async (u: string) => { const r = await assetFetch(u); if (!r.ok || !r.body) throw new Error('HTTP ' + r.status); const e = r.headers.get('content-encoding'); return JSON.parse(e?.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text()); };
+const meta = () => (metaP ??= assetFetch('fts/meta.json').then(r => r.json()));
 const key = (w: string) => /^[a-z]{2}/.test(w) ? w.slice(0, 2) : w[0];
-const shard = (p: string) => { if (!shards.has(p)) shards.set(p, gz(`${BASE}fts/${hex(p)}.json.gz`).catch(() => ({}))); return shards.get(p)!; };
+const shard = (p: string) => { if (!shards.has(p)) shards.set(p, gz(`fts/${hex(p)}.json.gz`).catch(() => ({}))); return shards.get(p)!; };
 
 type Scan = { ch: number; chTitle: string; snip: string; count: number } | null;
 let pool: Worker[] | null = null; let rr = 0, seq = 0; const waiting = new Map<number, (r: Scan) => void>();

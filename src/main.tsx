@@ -1,3 +1,4 @@
+import { initAssets } from './lib/assets';
 import '@fontsource/opendyslexic/400.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import React, { useEffect } from 'react';
@@ -96,6 +97,6 @@ function App() {
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {}));
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+initAssets().finally(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ErrorBoundary><BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><App /></BrowserRouter></ErrorBoundary></React.StrictMode>,
-);
+));

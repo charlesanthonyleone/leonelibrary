@@ -6,6 +6,7 @@ export type Book = {
 export type Page = { count: number; next: string | null; results: Book[] };
 
 const BASE = import.meta.env.BASE_URL;
+import { assetFetch, assetUrl, localKey } from './assets';
 /** Catalogue entry: only books whose complete text is hosted on Leone Library are listed. */
 export type CatEntry = { id: number; title: string; author: string; authors: Person[]; lang: string[]; subjects: string[]; shelves: string[]; downloads: number; cover: boolean; words: number; chapters: number };
 let catalog: Promise<CatEntry[]> | null = null;
@@ -14,7 +15,7 @@ export function getCatalog() {
   catalog.catch(() => { catalog = null; });
   return catalog;
 }
-export const toBook = (c: CatEntry): Book => ({ id: c.id, title: c.title, authors: c.authors, languages: c.lang, subjects: c.subjects, bookshelves: c.shelves, download_count: c.downloads, copyright: false, formats: c.cover ? { 'image/jpeg': `${BASE}covers/${c.id}.jpg` } : {}, words: c.words, chapterCount: c.chapters });
+export const toBook = (c: CatEntry): Book => ({ id: c.id, title: c.title, authors: c.authors, languages: c.lang, subjects: c.subjects, bookshelves: c.shelves, download_count: c.downloads, copyright: false, formats: c.cover ? { 'image/jpeg': assetUrl(`covers/${c.id}.jpg`) } : {}, words: c.words, chapterCount: c.chapters });
 /** Compatibility shim for older callers: the whole hosted catalogue. */
 export async function getSnapshot(): Promise<Page & { bundled: number[] }> {
   const c = await getCatalog();
@@ -88,7 +89,7 @@ export function getHosted(id: number): Promise<HostedBook> {
     bookCache.set(id, (async () => {
       if (id < 0) { const b = await (await import('./private')).privateGet(id); if (!b) throw new Error('not-hosted'); return b; }
       if (!(await isBundled(id))) throw new Error('not-hosted');
-      const r = await fetch(`${BASE}books/${id}.json.gz`);
+      const r = await assetFetch(`books/${id}.json.gz`);
       if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
       const enc = r.headers.get('content-encoding');
       const txt = enc && enc.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
@@ -100,7 +101,7 @@ export function getHosted(id: number): Promise<HostedBook> {
 }
 /** Raw JSON text of a hosted book (for fast pre-filtering in search). */
 export async function getHostedRaw(id: number): Promise<string> {
-  const r = await fetch(`${BASE}books/${id}.json.gz`); if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+  const r = await assetFetch(`books/${id}.json.gz`); if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
   const enc = r.headers.get('content-encoding'); return enc && enc.includes('gzip') ? r.text() : new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
 }
 export async function getChapters(id: number): Promise<Chapter[]> {
@@ -115,8 +116,11 @@ export async function getText(id: number): Promise<string> {
 
 /* ---- offline library ---- */
 const BOOKS_CACHE = 'leone-books';
-const bookUrls = (id: number) => [`${BASE}books/${id}.json.gz`, `${BASE}covers/${id}.jpg`];
+const bookPaths = (id: number) => [`books/${id}.json.gz`, `covers/${id}.jpg`];
+const bookUrls = (id: number) => bookPaths(id).map(localKey);
 export async function isOffline(id: number) { if (!('caches' in window)) return false; const c = await caches.open(BOOKS_CACHE); return !!(await c.match(bookUrls(id)[0])); }
-export async function keepOffline(id: number) { const c = await caches.open(BOOKS_CACHE); await c.add(bookUrls(id)[0]); await c.add(bookUrls(id)[1]).catch(() => {}); }
+export async function keepOffline(id: number) { const c = await caches.open(BOOKS_CACHE); const [b, cv] = bookPaths(id);
+  const r = await assetFetch(b); if (!r.ok) throw new Error(`HTTP ${r.status}`); await c.put(localKey(b), r.clone());
+  await assetFetch(cv).then(x => x.ok ? c.put(localKey(cv), x) : undefined).catch(() => {}); }
 export async function dropOffline(id: number) { const c = await caches.open(BOOKS_CACHE); await Promise.all(bookUrls(id).map(u => c.delete(u))); }
 export async function offlineIds(): Promise<number[]> { if (!('caches' in window)) return []; const c = await caches.open(BOOKS_CACHE); return (await c.keys()).map(r => r.url.match(/books\/(\d+)\.json\.gz/)?.[1]).filter(Boolean).map(Number); }
