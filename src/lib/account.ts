@@ -13,8 +13,15 @@ export const magicLink = (email: string) => call<{ sent: boolean }>('/auth/magic
 export const signOut = () => call('/auth/logout', { method: 'POST' });
 export const credits = () => call<{ balance: number; ledger: { at: number; delta: number; reason: string }[] }>('/credits');
 export const checkout = (pack: string) => call<{ url: string }>('/credits/checkout', { method: 'POST', body: JSON.stringify({ pack }) });
-export const syncPush = (data: Record<string, unknown>) => call('/sync', { method: 'PUT', body: JSON.stringify(data) });
-export const syncPull = () => call<Record<string, unknown>>('/sync');
+import { seal, open, merge, localSnapshot, applySnapshot, type Sealed } from './e2e';
+/** Encrypt everything locally and upload only ciphertext. */
+export const syncPush = async (phrase: string) => call('/sync', { method: 'PUT', body: JSON.stringify(await seal(localSnapshot(), phrase)) });
+/** Download, decrypt with the phrase, merge in any anonymous local data, and keep the result locally and on the server. */
+export async function syncPull(phrase: string) {
+  const s = await call<Partial<Sealed>>('/sync');
+  const remote = s && s.ct ? await open<Record<string, unknown>>(s as Sealed, phrase) : {};
+  const merged = merge(remote, localSnapshot()); applySnapshot(merged); await syncPush(phrase); return Object.keys(merged).length;
+}
 export const vote = (bookId: number) => call<{ votes: number; threshold: number }>(`/votes/${bookId}`, { method: 'POST' });
 const b64 = (b: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64 = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));

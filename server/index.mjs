@@ -97,7 +97,7 @@ const routes = {
     return { url: s.url };
   },
   'GET /sync': ({ user }) => { if (!user) throw Object.assign(new Error('Sign in first'), { status: 401 }); return JSON.parse(one('SELECT data FROM sync WHERE user=?', user)?.data ?? '{}'); },
-  'PUT /sync': ({ user, raw }) => { if (!user) throw Object.assign(new Error('Sign in first'), { status: 401 }); if (raw.length > 2e6) throw new Error('Too large'); run('INSERT OR REPLACE INTO sync VALUES(?,?,?)', user, raw, now()); return { ok: true }; },
+  'PUT /sync': ({ user, raw }) => { if (!user) throw Object.assign(new Error('Sign in first'), { status: 401 }); if (raw.length > 2e6) throw new Error('Too large'); { const b = JSON.parse(raw); if (b.v !== 1 || typeof b.ct !== 'string' || typeof b.iv !== 'string' || typeof b.salt !== 'string' || Object.keys(b).length !== 4) throw Object.assign(new Error('Sync accepts only end-to-end encrypted data'), { status: 400 }); } run('INSERT OR REPLACE INTO sync VALUES(?,?,?)', user, raw, now()); return { ok: true }; },
 };
 async function handle(req, res) {
   const url = new URL(req.url, SELF), ip = req.headers['x-forwarded-for']?.split(',')[0] ?? req.socket.remoteAddress;
