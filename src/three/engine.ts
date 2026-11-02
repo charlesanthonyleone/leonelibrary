@@ -409,6 +409,24 @@ export class Engine {
         const rg = mesh(new RoundedBoxGeometry(1.6, .01, 1.05, 2, .004), m, 0, .005, 0); rg.castShadow = false;
         const border = new THREE.Mesh(new THREE.RingGeometry(.6, .63, 4, 1), new THREE.MeshStandardMaterial({ color: '#d8c28a', roughness: 1 })); border.geometry.rotateZ(Math.PI / 4); border.geometry.scale(1.62, 1.02, 1); border.rotation.x = -Math.PI / 2; border.position.y = .0105; g.add(border);
         break; }
+      case 'armchair': case 'footstool': {
+        const fab = new THREE.MeshPhysicalMaterial({ color: it.color ?? '#7a2e2a', roughness: .95, normalMap: tex('fabric_pattern_07_nor', 3), sheen: 1, sheenColor: new THREE.Color(it.color ?? '#7a2e2a').multiplyScalar(1.6), sheenRoughness: .5 });
+        const wood = new THREE.MeshPhysicalMaterial({ color: '#3b2416', roughness: .45, clearcoat: .6 });
+        const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material = fab) => mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(.04, w / 3, h / 3, d / 3)), m, x, y, z);
+        const legs = (w: number, d: number, h: number) => { for (const sx of [-1, 1]) for (const sz of [-1, 1]) mesh(new THREE.CylinderGeometry(.018, .012, h, 10), wood, sx * (w / 2 - .05), h / 2, sz * (d / 2 - .05)); };
+        if (it.kind === 'footstool') { legs(.42, .32, .14); box(.44, .16, .34, 0, .22, 0); break; }
+        legs(.72, .7, .12);
+        box(.66, .14, .62, 0, .19, .02);            // base
+        box(.56, .1, .54, 0, .31, .05);             // seat cushion
+        box(.66, .62, .14, 0, .62, -.27);           // back
+        box(.14, .34, .64, -.33, .4, 0); box(.14, .34, .64, .33, .4, 0); // arms
+        box(.12, .3, .2, -.31, .78, -.2); box(.12, .3, .2, .31, .78, -.2); // wings
+        break; }
+      case 'sidetable': {
+        const wood = new THREE.MeshPhysicalMaterial({ color: it.color ?? '#5a3a22', roughness: .4, clearcoat: .7, clearcoatRoughness: .25 });
+        mesh(new THREE.CylinderGeometry(.24, .24, .03, 48), wood, 0, .56, 0);
+        lathe([[0, 0], [.14, 0], [.14, .02], [.05, .05], [.03, .2], [.04, .4], [.025, .54], [0, .55]], wood);
+        break; }
       case 'globe': {
         lathe([[0, 0], [.08, 0], [.08, .012], [.03, .02], [.012, .06], [.012, .1], [0, .1]], new THREE.MeshPhysicalMaterial({ color: '#4a2f1d', roughness: .4, clearcoat: .6 }));
         const tilt = new THREE.Group(); tilt.position.y = .22; tilt.rotation.z = .41; g.add(tilt);

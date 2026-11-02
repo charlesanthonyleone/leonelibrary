@@ -77,8 +77,8 @@ export default function Shelf() {
   const selItem = sel?.type === 'item' ? L.items.find(i => i.id === sel.id) : undefined;
   const selBook = sel?.type === 'book' ? L.books.find(b => String(b.id) === sel.id) : undefined;
   const setItem = (it: Item, c = false) => patch({ items: L.items.map(i => (i.id === it.id ? it : i)) }, c);
-  const addItem = (kind: ItemKind) => gate('Decorations', () => { const H = caseHeight(L), onTop = !['lamp', 'rug', 'fern', 'plant'].includes(kind);
-    const it: Item = { id: uid(), kind, x: onTop ? (Math.random() - .5) * (L.width - .4) : (Math.random() > .5 ? 1 : -1) * (L.width / 2 + .35), y: onTop ? H : 0, z: onTop ? .02 : .35, ry: 0, s: kind === 'rug' ? 1.3 : 1, color: kind === 'rug' ? '#6d2a22' : undefined };
+  const addItem = (kind: ItemKind) => gate('Decorations', () => { const H = caseHeight(L), onTop = !['lamp', 'rug', 'fern', 'plant', 'armchair', 'sidetable', 'footstool'].includes(kind);
+    const it: Item = { id: uid(), kind, x: onTop ? (Math.random() - .5) * (L.width - .4) : (Math.random() > .5 ? 1 : -1) * (L.width / 2 + (kind === 'armchair' ? .7 : .35)), y: onTop ? H : 0, z: onTop ? .02 : kind === 'armchair' || kind === 'footstool' ? .6 : .35, ry: kind === 'armchair' ? .5 : 0, s: kind === 'rug' ? 1.3 : 1, color: kind === 'rug' ? '#6d2a22' : undefined };
     patch({ items: [...L.items, it] }); setMode('decor'); setTab('decor'); setSel({ type: 'item', id: it.id }); });
   const share = () => { const url = `${location.origin}${location.pathname}#room=${encodeLayout(L)}`; navigator.clipboard?.writeText(url).catch(() => {}); history.replaceState(null, '', `#room=${encodeLayout(L)}`); flash('Share link copied. The whole room lives in the link, nothing is uploaded.'); history.replaceState(null, '', location.pathname); };
   const snap = () => { const d = lib.current?.snapshot(); if (!d) return; const a = document.createElement('a'); a.href = d; a.download = `${L.name.replace(/\W+/g, '-')}.jpg`; a.click(); };
