@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getHosted, getCatalog, type HostedBook, type CatEntry } from '../lib/books';
-import { bookDna, type Dna } from '../lib/dna';
+import { bookDna, DNA_UNSUPPORTED, type Dna } from '../lib/dna';
 
 const level = (e: number) => e >= 80 ? 'very easy' : e >= 70 ? 'easy' : e >= 60 ? 'plain English' : e >= 50 ? 'fairly difficult' : e >= 30 ? 'difficult' : 'very difficult';
 export default function DnaPage() {
@@ -10,6 +10,7 @@ export default function DnaPage() {
   useEffect(() => { getHosted(id).then(h => { setB(h); setTimeout(() => setD(bookDna(h)), 0); }).catch(() => setErr(true)); }, [id]);
   const [v, setV] = useState<{ b: HostedBook; d: Dna } | null>(null);
   useEffect(() => { setV(null); if (vs) getHosted(vs).then(h => setV({ b: h, d: bookDna(h) })).catch(() => setV(null)); }, [vs]);
+  if (b && DNA_UNSUPPORTED.has(b.lang)) return <div className="page"><div className="eyebrow">Book DNA</div><h1 className="display">{b.title}</h1><p className="lede">Book DNA counts words and sentences, and this book's language is not written with spaces between words, so the figures would be wrong. It is not shown rather than guessed.</p><Link className="btn gold" to={`/read?id=${id}`}>Read the book</Link></div>;
   if (err) return <div className="page"><h1 className="display">Book not found</h1><Link to="/library">Back to the Library</Link></div>;
   if (!b || !d) return <div className="page"><p className="muted" role="status">Reading the whole book to measure it…</p></div>;
   const maxW = Math.max(...d.chapterWords), C = b.chapters.length;
@@ -25,6 +26,7 @@ export default function DnaPage() {
       <h2>Shape of the book</h2>
       <p className="small muted">Words in each of the {C} chapters. Select a bar to read it.</p>
       <div className="dna-bars">{d.chapterWords.map((w, i) => <Link key={i} to={`/read?id=${id}&ch=${i}`} title={`${b.chapters[i].t}: ${w.toLocaleString()} words`} aria-label={`${b.chapters[i].t}, ${w} words`} style={{ height: `${Math.max(3, (w / maxW) * 100)}%` }} />)}</div>
+      {b.lang === 'de' && <p className="small muted">The story map is not drawn for German, where every noun is capitalised and names can't be told apart from them.</p>}
       {d.names.length > 0 && <><h2>Story map</h2>
         <p className="small muted">The most frequent capitalised names that never appear in lower case, and where in the book each one appears. Darker means more mentions in that chapter.</p>
         <div className="story-map" style={{ gridTemplateColumns: `9rem repeat(${C}, 1fr)` }}>

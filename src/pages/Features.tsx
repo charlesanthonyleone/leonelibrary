@@ -6,7 +6,8 @@ import { THEMES } from '../lib/store';
 import { getChapters } from '../lib/books';
 import { buildEpub, download, today } from '../lib/epub';
 import { usePlan } from '../lib/room';
-import { STARTER } from './Shelf';
+import { STARTER, logReading, shareNotesLink } from '../lib/shared';
+export { logReading, shareNotesLink };
 
 const Local = ({ children }: { children?: ReactNode }) => <div className="example-banner">{children ?? 'Saved on this device only. Accounts and syncing are coming soon.'}</div>;
 const Head = ({ eb, t, l }: { eb: string; t: string; l: ReactNode }) => <><div className="eyebrow">{eb}</div><h1 className="display">{t}</h1><p className="lede">{l}</p></>;
@@ -110,7 +111,6 @@ export function SharedNotes() {
     <ul className="notes fx-notes">{data.hl.map(h => <li key={h.id}><span className="tiny muted">Chapter {h.chapter + 1}</span><q>{h.text}</q>{h.note && <p>{h.note}</p>}</li>)}</ul>
     <div className="row gap"><button className="btn gold" disabled={done} onClick={() => { setMine(m => [...m, ...data.hl.filter(h => !m.some(x => x.id === h.id))]); setDone(true); }}>{done ? 'Added to your copy' : 'Add to my copy'}</button><Link className="btn ghost" to={`/read?id=${data.id}`}>Open the book</Link></div></div>;
 }
-export const shareNotesLink = (id: number, title: string, who: string, hl: Highlight[]) => `${location.origin}${import.meta.env.BASE_URL}notes#n=${btoa(unescape(encodeURIComponent(JSON.stringify({ id, title, who, hl })))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
 
 /* ------------------------------ 5. Goals, streaks, recap ------------------------------ */
 export function Goals() {
@@ -143,7 +143,6 @@ export function Goals() {
   </div>;
 }
 /** Called from the reader: adds whole active minutes to today's log. */
-export function logReading(min: number) { const l = load<Record<string, number>>('readlog', {}); const k = today(); save('readlog', { ...l, [k]: (l[k] || 0) + min }); }
 
 /* ------------------------------ 6. Translation glossary ------------------------------ */
 type Term = { id: string; src: string; tgt: string; note: string; pos: string };
@@ -212,6 +211,7 @@ export function ExportPage() {
   const [tw, th] = trim.split('x').map(Number); const ppi = paper === 'cream' ? 0.0025 : 0.002252; const spine = pages * ppi; const coverW = tw * 2 + spine + 0.25;
   return <div className="page wide">
     <Head eb="Export" t="Take your edition anywhere" l="Download a real EPUB of any cached book with your own edits, print it to PDF, and size a print-on-demand cover." />
+    <HighlightsExport />
     <div className="two-col">
       <div className="glass pad fx-card"><h2 className="h3">Ebook &amp; PDF</h2><BookPick v={pick} set={setPick} /><div className="row gap wrap mt"><button className="btn gold" onClick={epub}>Download EPUB</button><button className="btn ghost" onClick={pdf}>Print / save PDF</button></div>{state && <p className="small muted">{state}</p>}
         <p className="tiny muted">EPUB 3, built entirely in your browser. Validated structure: mimetype, container, OPF, nav, one XHTML file per chapter.</p></div>
@@ -239,4 +239,17 @@ export function Contest() {
     <div className="fx-contest-side"><b>Entries so far</b><p className="small muted">{entry ? '1 draft (yours, on this device). Public entries appear here once submissions open.' : 'None yet. Public entries appear here once submissions open.'}</p></div>
     {open && <div className="fx-entry"><input className="fx-in" placeholder="Title" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} /><textarea className="fx-in fx-ta" placeholder="Your entry…" value={f.text} onChange={e => setF({ ...f, text: e.target.value })} /><button className="btn gold sm" disabled={!f.title} onClick={() => { setEntry(f); setOpen(false); }}>Save draft</button></div>}
   </div></section>;
+}
+
+function HighlightsExport() {
+  const all = Object.keys(localStorage).filter(k => k.startsWith('leone:highlights:')).map(k => ({ id: Number(k.split(':')[2]), hl: load<Highlight[]>(k.slice(6), []) })).filter(x => x.hl.length);
+  const [titles, setTitles] = useState<Record<number, { t: string; a: string }>>({});
+  useEffect(() => { import('../lib/books').then(m => m.getCatalog()).then(c => setTitles(Object.fromEntries(c.map(b => [b.id, { t: b.title, a: b.author }])))); }, []);
+  const n = all.reduce((s, x) => s + x.hl.length, 0);
+  const name = (id: number) => titles[id]?.t ?? (id < 0 ? 'Private import' : `Book ${id}`);
+  const md = () => download(new Blob([`# My highlights from Leone Library\n\n` + all.map(x => `## ${name(x.id)}${titles[x.id] ? ` by ${titles[x.id].a}` : ''}\n\n` + x.hl.map(h => `> ${h.text.replace(/\n/g, ' ')}\n${h.note ? `\n${h.note}\n` : ''}\n— chapter ${h.chapter + 1}, ${new Date(h.at).toLocaleDateString()}\n`).join('\n')).join('\n')], { type: 'text/markdown' }), 'leone-highlights.md');
+  const csv = () => download(new Blob([[['book', 'author', 'chapter', 'highlight', 'note', 'date'], ...all.flatMap(x => x.hl.map(h => [name(x.id), titles[x.id]?.a ?? '', String(h.chapter + 1), h.text, h.note ?? '', new Date(h.at).toISOString().slice(0, 10)]))].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv' }), 'leone-highlights.csv');
+  return <div className="glass pad fx-card mt"><h2 className="h3">My highlights</h2>
+    <p className="small muted">{n ? `${n} highlight${n > 1 ? 's' : ''} across ${all.length} book${all.length > 1 ? 's' : ''}, stored in this browser.` : 'No highlights yet. Select a passage in the reader to highlight it.'}</p>
+    <div className="row gap"><button className="btn gold sm" disabled={!n} onClick={md}>Download Markdown</button><button className="btn ghost sm" disabled={!n} onClick={csv}>Download CSV</button></div></div>;
 }

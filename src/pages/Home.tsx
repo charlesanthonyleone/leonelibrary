@@ -1,8 +1,10 @@
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { getCatalog, getHosted } from '../lib/books';
 import { Link } from 'react-router-dom';
 import Room from '../components/Room';
 import { fromPreset } from '../lib/room';
-import { STARTER } from './Shelf';
-import { Contest } from './Features';
+import { STARTER } from '../lib/shared';
+const Contest = lazy(() => import('./Features').then(m => ({ default: m.Contest })));
 
 const ROOMS = [
   { n: 'I', to: '/library', t: 'The Library', d: 'Thousands of complete public-domain classics, hosted in full and free to read in a reader you can make your own.' },
@@ -24,6 +26,7 @@ export default function Home() {
         <p className="hero-facts">Free to read <i /> 4 public-domain sources <i /> 85–90% royalties to you</p>
       </section>
 
+      <FirstLine />
       <section className="section index-sec">
         <div className="eyebrow">Inside</div>
         <h2 className="display">Five rooms, one library</h2>
@@ -42,7 +45,7 @@ export default function Home() {
         <Room cfg={meadow} books={STARTER.slice(0, 6)} rows={1} compact />
       </section>
 
-      <Contest />
+      <Suspense fallback={null}><Contest /></Suspense>
 
       <section className="section">
         <div className="eyebrow">Also in the library</div>
@@ -59,4 +62,20 @@ export default function Home() {
       </section>
     </>
   );
+}
+
+// A real opening line every day: one of the 400 most-read hosted books, picked by the date.
+function FirstLine() {
+  const [d, setD] = useState<{ id: number; title: string; author: string; ch: number; line: string } | null>(null);
+  useEffect(() => { let live = true; (async () => {
+    const cat = (await getCatalog()).slice().sort((a, b) => b.downloads - a.downloads).slice(0, 400);
+    const t = new Date(), n = Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / 864e5);
+    for (let k = 0; k < 5 && live; k++) { const b = cat[(n * 7919 + k) % cat.length]; try { const h = await getHosted(b.id);
+      const ci = h.chapters.findIndex((c, i) => i > 0 || !/^opening$/i.test(c.t)); const p = (h.chapters[ci]?.p ?? []).find(x => x.length > 40 && /[a-z]/.test(x) && !/^[A-Z\s.,]+$/.test(x));
+      if (!p) continue; const m = p.match(/^.{20,320}?[.!?]["”’]?(?=\s|$)/); if (live) setD({ id: b.id, title: b.title.split(/[;:]/)[0], author: b.author, ch: ci, line: m ? m[0] : p.slice(0, 300) + '…' }); return; } catch { /* try next */ } } })();
+    return () => { live = false; }; }, []);
+  if (!d) return null;
+  return <section className="section first-line" aria-label="Today's first line"><div className="glass pad"><div className="eyebrow">Today's first line</div>
+    <blockquote className="fl-q">“{d.line.replace(/^["“]|["”]$/g, '')}”</blockquote>
+    <p className="small muted">{d.title} · {d.author}</p><Link className="btn gold sm" to={`/read?id=${d.id}&ch=${d.ch}`}>Start reading</Link></div></section>;
 }

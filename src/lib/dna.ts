@@ -7,6 +7,7 @@ export type Dna = {
 const STOP = new Set('the and of to a in that it was he i his her she you with as for had is on at not but be by they him this which all were from so have my or we me said one there are an their what when no would if been them who more out up then will into could do some its any your about our than very us only can now may little upon such over these before after great man made should well like must down how other time much own did good where might himself never two old see know come here even first through way long most yet those again went shall too being every without still while came am many same once let make thought nothing back say away under each just though another last whom something both whose against why off far ever us also among'.split(' '));
 const TITLES = new Set('Mrs Miss Sir Lady Lord Madame Monsieur Mme Mlle Herr Frau Captain Colonel General Doctor Professor Uncle Aunt Saint God Heaven Chapter Book Part Letter Monday Tuesday Wednesday Thursday Friday Saturday Sunday January February March April June July August September October November December English French'.split(' '));
 function syllables(w: string) { w = w.toLowerCase().replace(/[^a-z]/g, ''); if (w.length <= 3) return 1; w = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, ''); return Math.max(1, (w.match(/[aeiouy]{1,2}/g) || []).length); }
+export const DNA_UNSUPPORTED = new Set(['zh', 'ja', 'ko', 'th']);
 export function bookDna(b: HostedBook): Dna {
   let words = 0, sentences = 0, letters = 0, syl = 0, quoted = 0, chars = 0, longest = '';
   const mid = new Set<string>(); const freq = new Map<string, number>(), caps = new Map<string, number[]>(), lower = new Set<string>(); const chapterWords: number[] = [];
@@ -20,8 +21,10 @@ export function bookDna(b: HostedBook): Dna {
           if (/^\p{Lu}\p{Ll}{2,}$/u.test(w)) { const a = caps.get(w) ?? new Array(C).fill(0); a[ci]++; caps.set(w, a); if (wi > 0) mid.add(w); } else if (/^\p{Ll}/u.test(w)) lower.add(w.toLowerCase()); }); }
     }
     chapterWords.push(cw); });
-  const names = [...caps].filter(([n]) => mid.has(n) && !TITLES.has(n) && !lower.has(n.toLowerCase()) && !STOP.has(n.toLowerCase())).map(([name, per]) => ({ name, per, count: per.reduce((s, x) => s + x, 0) })).sort((a, b) => b.count - a.count).slice(0, 12);
-  const topWords = [...freq].filter(([w]) => w.length > 3 && !STOP.has(w) && !caps.has(w[0].toUpperCase() + w.slice(1))).sort((a, b) => b[1] - a[1]).slice(0, 24);
+  const names = b.lang === 'de' ? [] : [...caps].filter(([n]) => mid.has(n) && !TITLES.has(n) && !lower.has(n.toLowerCase()) && !STOP.has(n.toLowerCase())).map(([name, per]) => ({ name, per, count: per.reduce((s, x) => s + x, 0) })).sort((a, b) => b.count - a.count).slice(0, 12);
+  // Outside English there is no built-in stop list, so the book's own 120 most common words are treated as function words.
+  const own = b.lang === 'en' ? new Set<string>() : new Set([...freq].sort((x, y) => y[1] - x[1]).slice(0, 120).map(x => x[0]));
+  const topWords = [...freq].filter(([w]) => w.length > 3 && !STOP.has(w) && !own.has(w) && !caps.has(w[0].toUpperCase() + w.slice(1))).sort((a, b) => b[1] - a[1]).slice(0, 24);
   const avgSentence = words / Math.max(1, sentences);
   return { words, unique: freq.size, sentences, avgSentence, avgWord: letters / Math.max(1, words), dialogue: quoted / Math.max(1, chars), ease: b.lang === 'en' ? 206.835 - 1.015 * avgSentence - 84.6 * (syl / Math.max(1, words)) : null, chapterWords, names, longest, topWords };
 }

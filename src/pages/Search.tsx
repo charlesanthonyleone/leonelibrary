@@ -12,6 +12,13 @@ const meta = () => (metaP ??= fetch(`${BASE}fts/meta.json`).then(r => r.json()))
 const key = (w: string) => /^[a-z]{2}/.test(w) ? w.slice(0, 2) : w[0];
 const shard = (p: string) => { if (!shards.has(p)) shards.set(p, gz(`${BASE}fts/${hex(p)}.json.gz`).catch(() => ({}))); return shards.get(p)!; };
 
+type Scan = { ch: number; chTitle: string; snip: string; count: number } | null;
+let pool: Worker[] | null = null; let rr = 0, seq = 0; const waiting = new Map<number, (r: Scan) => void>();
+function scanOff(raw: string, words: string[], needle: string | null, ascii: boolean): Promise<Scan> {
+  if (typeof Worker === 'undefined') return import('../lib/fts.worker').then(m => m.scanRaw({ raw, words, needle, ascii }));
+  pool ??= Array.from({ length: Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 2) - 1)) }, () => { const w = new Worker(new URL('../lib/fts.worker.ts', import.meta.url), { type: 'module' }); w.onmessage = (e: MessageEvent<{ id: number; r: Scan }>) => { waiting.get(e.data.id)?.(e.data.r); waiting.delete(e.data.id); }; return w; });
+  const id = ++seq; return new Promise(res => { waiting.set(id, res); pool![rr++ % pool!.length].postMessage({ id, raw, words, needle, ascii }); });
+}
 export type Hit = { book: CatEntry; ch: number; chTitle: string; snip: string; count: number };
 export async function fullText(q: string, limit = 25, onHit?: (h: Hit) => void, start = 0): Promise<{ hits: Hit[]; candidates: number; next: number }> {
   const phrase = q.match(/"([^"]+)"/)?.[1]; const words = [...new Set((fold(q).match(/[\p{L}]{3,24}/gu) ?? []))];
@@ -22,16 +29,11 @@ export async function fullText(q: string, limit = 25, onHit?: (h: Hit) => void, 
   const cat = await getCatalog(), byId = new Map(cat.map(c => [c.id, c]));
   const cands = (set ? [...set].map(i => byId.get(m.ids[i])!) : cat).filter(Boolean).sort((a, b) => b.downloads - a.downloads);
   const hits: Hit[] = []; const needle = phrase ? fold(phrase) : null;
-  const re = new RegExp(`(?<![\\p{L}])(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\p{L}])`, 'giu');
-  const scan = (b: CatEntry, h: HostedBook) => { let best: Hit | null = null, total = 0;
-    h.chapters.forEach((c, ci) => c.p.forEach(p => { const lp = p.toLowerCase(); if (ascii && !(needle ? lp.includes(needle.slice(0, 4)) : lp.includes(words[0].slice(0, 3)))) return; const f = fold(p); const ok = needle ? f.includes(needle) : words.every(w => f.includes(w)); if (!ok) return; total++;
-      if (!best) { const at = needle ? f.indexOf(needle) : Math.max(0, f.search(re)); const s = Math.max(0, at - 90); best = { book: b, ch: ci, chTitle: c.t, snip: (s ? '…' : '') + p.slice(s, s + 260) + (p.length > s + 260 ? '…' : ''), count: 0 }; } }));
-    if (best) (best as Hit).count = total; return best as Hit | null; };
   const ascii = /^[\x00-\x7f]*$/.test((needle ?? '') + words.join(''));
   const pool = cands.slice(start, start + 96); let i = 0;
   for (; i < pool.length && hits.length < limit; i += 16) {
-    const got = await Promise.all(pool.slice(i, i + 16).map(b => getHostedRaw(b.id).then(raw => { const l = raw.toLowerCase(); if (ascii && !(needle ? l.includes(needle.split(' ')[0]) : words.every(w => l.includes(w)))) return null; return scan(b, JSON.parse(raw)); }).catch(() => null)));
-    for (const g of got) if (g && hits.length < limit) { hits.push(g); onHit?.(g); }
+    const got = await Promise.all(pool.slice(i, i + 16).map(b => getHostedRaw(b.id).then(raw => scanOff(raw, words, needle, ascii)).then(r => { if (r && hits.length < limit) { const g = { book: b, ...r } as Hit; hits.push(g); onHit?.(g); } }).catch(() => null)));
+    void got;
   }
   return { hits, candidates: cands.length, next: start + i };
 }

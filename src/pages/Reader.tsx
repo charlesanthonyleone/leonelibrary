@@ -4,7 +4,7 @@ import { author, getBook, getChapters, rightsFor, type Book, type Chapter } from
 import { uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
 import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
-import { logReading, shareNotesLink } from './Features';
+import { logReading, shareNotesLink } from '../lib/shared';
 import QuoteCard from '../components/QuoteCard';
 
 type Bookmark = { id: string; chapter: number; para: number; label: string; at: number };

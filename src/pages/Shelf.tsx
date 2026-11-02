@@ -15,27 +15,11 @@ import { DEFAULT_LOOK, type ReaderLook } from '../lib/reader3d';
 import type { ReadState } from '../three/reading';
 import { getChapters, type Chapter } from '../lib/books';
 import { save, useStored, type Edit } from '../lib/store';
-import { logReading } from './Features';
+import { logReading } from '../lib/shared';
 
 const Library3D = lazy(() => import('../three/Library3D'));
 
-export const STARTER = [
-  { id: 1342, title: 'Pride and Prejudice', author: 'Jane Austen' }, { id: 84, title: 'Frankenstein', author: 'Mary Shelley' },
-  { id: 2554, title: 'Crime and Punishment', author: 'Fyodor Dostoevsky' }, { id: 1661, title: 'The Adventures of Sherlock Holmes', author: 'Arthur Conan Doyle' },
-  { id: 345, title: 'Dracula', author: 'Bram Stoker' }, { id: 64317, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald' },
-  { id: 2701, title: 'Moby Dick', author: 'Herman Melville' }, { id: 11, title: "Alice's Adventures in Wonderland", author: 'Lewis Carroll' },
-  { id: 1513, title: 'Romeo and Juliet', author: 'William Shakespeare' }, { id: 1260, title: 'Jane Eyre', author: 'Charlotte Brontë' },
-  { id: 98, title: 'A Tale of Two Cities', author: 'Charles Dickens' }, { id: 174, title: 'The Picture of Dorian Gray', author: 'Oscar Wilde' },
-  { id: 1400, title: 'Great Expectations', author: 'Charles Dickens' }, { id: 768, title: 'Wuthering Heights', author: 'Emily Brontë' },
-  { id: 1184, title: 'The Count of Monte Cristo', author: 'Alexandre Dumas' }, { id: 2600, title: 'War and Peace', author: 'Leo Tolstoy' },
-  { id: 1399, title: 'Anna Karenina', author: 'Leo Tolstoy' }, { id: 158, title: 'Emma', author: 'Jane Austen' },
-  { id: 161, title: 'Sense and Sensibility', author: 'Jane Austen' }, { id: 1952, title: 'The Yellow Wallpaper', author: 'Charlotte Perkins Gilman' },
-  { id: 120, title: 'Treasure Island', author: 'Robert Louis Stevenson' }, { id: 43, title: 'Dr Jekyll and Mr Hyde', author: 'Robert Louis Stevenson' },
-  { id: 36, title: 'The War of the Worlds', author: 'H. G. Wells' }, { id: 35, title: 'The Time Machine', author: 'H. G. Wells' },
-  { id: 1080, title: 'A Modest Proposal', author: 'Jonathan Swift' }, { id: 829, title: "Gulliver's Travels", author: 'Jonathan Swift' },
-  { id: 5200, title: 'Metamorphosis', author: 'Franz Kafka' }, { id: 4300, title: 'Ulysses', author: 'James Joyce' },
-  { id: 1232, title: 'The Prince', author: 'Niccolò Machiavelli' }, { id: 205, title: 'Walden', author: 'Henry David Thoreau' },
-];
+import { STARTER } from '../lib/shared';
 const Lock = () => <span className="lock" aria-label="Editor plan">🔒</span>;
 const CAMS: [string, Layout['cam']][] = [['Front', { az: 0, el: .08, dist: 2.7 }], ['Left', { az: -.75, el: .15, dist: 2.9 }], ['Right', { az: .7, el: .15, dist: 2.9 }], ['Close', { az: -.2, el: .05, dist: 1.5 }], ['Wide', { az: -.45, el: .22, dist: 5 }]];
 export const ambFor = (l: Layout): Amb => l.weather === 'rain' ? 'rain' : l.setting === 'outdoor' && l.view === 'meadow' ? 'falls' : l.view === 'snow' ? 'wind' : l.view === 'night' ? 'night' : 'room';
