@@ -34,7 +34,7 @@ export function PublishingHome() {
           <div className="feature glass"><h3>Originality</h3><p>Remixes need meaningful new material, not a find-and-replace. Mostly-original work qualifies for the 10% rate.</p></div>
           <div className="feature glass"><h3>AI disclosure</h3><p>Every book states which AI tools were used and for what. It goes on the copyright page.</p></div>
           <div className="feature glass"><h3>Rights check</h3><p>Sources must be US public domain (first published 1930 or earlier). Protected names are flagged.</p></div>
-          <div className="feature glass"><h3>Human review &amp; editing</h3><p>Optional paid add-ons: rights review, copy-edit, developmental edit. <Soon /></p></div>
+          <div className="feature glass"><h3>Human review &amp; editing</h3><p>Optional volunteer review: rights review, copy-edit, developmental edit. <Soon /></p></div>
         </div>
       </Section>
       <div className="row gap wrap center"><Link className="btn gold" to="/publishing/calculator">Fee calculator</Link><Link className="btn ghost" to="/publishing/submit">Submit your book</Link><Link className="btn ghost" to="/publishing/royalties">Royalty dashboard</Link><Link className="btn ghost" to="/storefront">Author storefronts</Link></div>
@@ -139,9 +139,9 @@ export function Submit() {
         {step === 2 && <>
           <ul className="gate">{checks.map(c => <li key={c.label} className={c.ok ? 'ok' : 'no'}>{c.ok ? '✓' : '○'} {c.label}</li>)}</ul>
           <p className={pass ? 'ok-msg' : 'warn-msg'}>{pass ? `Passes the gate. Fee: ${fee}% of net royalties.` : 'Not ready yet. Complete the items above.'}</p>
-          <label className="check"><input type="checkbox" checked={f.review} onChange={e => up({ review: e.target.checked })} /> Add human rights &amp; quality review (paid add-on) <Soon /></label>
+          <label className="check"><input type="checkbox" checked={f.review} onChange={e => up({ review: e.target.checked })} /> Add human rights &amp; quality review <Soon /></label>
           <label>Editing add-on<select value={f.edit} onChange={e => up({ edit: e.target.value })}><option value="none">None</option><option value="copy">Copy-edit</option><option value="line">Line edit</option><option value="dev">Developmental edit</option></select></label>
-          <p className="tiny muted">Paid editing is coming soon; pricing will be shown before you buy.</p>
+          <p className="tiny muted">Editing help is volunteer-run and free.</p>
         </>}
         {step === 3 && <>
           <div className="lbl">Formats</div>

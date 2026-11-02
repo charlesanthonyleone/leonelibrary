@@ -296,3 +296,4 @@ input[type=color] { width: 100%; height: 36px; border: 1px solid var(--line); bo
 
 body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation: none !important; transition-duration: .01ms !important; }
 @media (prefers-reduced-motion: reduce) { .case-stage .b-spine, .case-stage .b-title { animation: none !important; } }
+.uni-link { margin-left: 10px; white-space: nowrap; color: inherit; opacity: .8; } @media (max-width: 720px) { .uni-link { display: none; } }

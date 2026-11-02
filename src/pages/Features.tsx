@@ -8,7 +8,7 @@ import { buildEpub, download, today } from '../lib/epub';
 import { usePlan } from '../lib/room';
 import { STARTER } from './Shelf';
 
-const Local = ({ children }: { children?: ReactNode }) => <div className="example-banner">{children ?? 'Saved on this device only. Accounts and syncing are coming soon.'}</div>;
+const Local = ({ children }: { children?: ReactNode }) => <div className="example-banner">{children ?? 'Saved on this device only. No account needed.'}</div>;
 const Head = ({ eb, t, l }: { eb: string; t: string; l: ReactNode }) => <><div className="eyebrow">{eb}</div><h1 className="display">{t}</h1><p className="lede">{l}</p></>;
 type B = { id: number | string; title: string; author: string };
 const useBooks = (): B[] => { const [s] = useShelf(); return s.length ? s : STARTER; };
@@ -27,7 +27,7 @@ export function PublicShelves() {
   const follow = () => { const m = paste.match(/room=([^&\s]+)/); const l = m && decodeLayout(m[1]); if (!l) return setMsg('That doesn’t look like a Leone shelf link.'); setFollows([{ id: uid(), name: l.name, code: m![1], at: Date.now() }, ...follows]); setPaste(''); setMsg(`Following “${l.name}”.`); };
   return <div className="page wide">
     <Head eb="Public shelves" t="Shelves worth following" l="Publish any of your 3D rooms as a public link. Anyone who opens it sees your exact shelf, books, light and decor, and can follow it." />
-    <Local>Shelf links work today: the whole room travels inside the link. Public profiles, follower counts and a feed need accounts, which are coming soon. Until then, “following” keeps the shelf on this device.</Local>
+    <Local>Shelf links work today: the whole room travels inside the link. There are no accounts: “following” keeps the shelf on this device.</Local>
     <div className="two-col">
       <div className="glass pad fx-card"><h3>Publish a shelf</h3>
         {rooms.length ? <><label className="lbl">Room</label><select className="fx-in" value={room} onChange={e => setRoom(e.target.value)}>{rooms.map(r => <option key={r.id} value={r.id}>{r.name} · {r.books.length} books</option>)}</select>
@@ -57,10 +57,10 @@ export function Marketplace() {
     {msg && <p className="ok-msg">{msg} <Link to="/shelf">Open My Shelf →</Link></p>}
     <h3 className="fx-h">3D rooms</h3>
     <div className="fx-grid">{PRESETS3D.map(p => { const locked = !p.free && !pro; return <div key={p.id} className="glass fx-theme"><span className={`p3-sw p3-${p.id}`} /><div className="pad"><b>{p.name}</b><p className="small muted">{p.blurb}</p><div className="row gap"><span className="chip">{p.free ? 'Free' : 'Editor plan'}</span><span className="chip">by Leone Library</span></div>
-      <button className="btn gold sm" disabled={locked} onClick={() => install(p.id, p.name)}>{locked ? '🔒 Editor plan' : 'Install'}</button></div></div>; })}</div>
+      <button className="btn gold sm" disabled={locked} onClick={() => install(p.id, p.name)}>Install</button></div></div>; })}</div>
     <h3 className="fx-h">Reader palettes</h3>
     <div className="fx-grid">{Object.entries(THEMES).map(([n, t]) => <div key={n} className="glass fx-theme"><div className="fx-pal" style={{ background: t.bg, color: t.ink }}><span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 22 }}>It was the best of times</span><i style={{ background: t.accent }} /></div><div className="pad"><b>{n}</b><div className="row gap"><span className="chip">Free</span></div><button className="btn ghost sm" onClick={() => { setDesign(d => ({ ...d, theme: n, ...t })); setMsg(`Reader palette “${n}” applied.`); }}>Apply</button></div></div>)}</div>
-    <div className="glass pad fx-card mt"><h3>Sell your own theme</h3><p className="small muted">Design a room in the editor, then list it here. Creator listings, pricing and revenue share are not open yet.</p><button className="btn ghost" disabled>Submit a theme · coming soon</button></div>
+    
   </div>;
 }
 
@@ -77,7 +77,7 @@ export function Clubs() {
   const upd = (n: Club) => setClubs(clubs.map(x => (x.id === n.id ? n : x)));
   return <div className="page wide">
     <Head eb="Book clubs" t="Read together, at one pace" l="Pick a book and a pace. Everyone gets the same weekly schedule and a discussion thread for each chapter, so nobody gets spoiled." />
-    <Local>Schedules and invite links work now. Discussion posts stay on this device until accounts launch; there is no shared server yet.</Local>
+    <Local>Schedules and invite links work now. Discussion posts stay on this device; there are no accounts and no shared server.</Local>
     <div className="fx-split">
       <aside className="glass pad fx-card"><h3>Your clubs</h3>{clubs.map(x => <button key={x.id} className={`fx-li ${x.id === cur ? 'on' : ''}`} onClick={() => setCur(x.id)}>{x.name}<small>{x.title}</small></button>)}
         <h4 className="mt">Start a club</h4><input className="fx-in" placeholder="Club name" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /><BookPick v={f.book} set={v => setF({ ...f, book: v })} />
@@ -181,7 +181,7 @@ export function CollabStudio() {
   const total = d?.authors.reduce((s, a) => s + a.share, 0) ?? 0;
   return <div className="page wide">
     <Head eb="Studio · Co-authoring" t="Remix together" l="Write a remix with co-authors: every save is a version you can compare and restore, and royalty splits are agreed up front." />
-    <Local>Versions and splits are saved on this device. Real-time co-editing and paying out splits need accounts and a signed Leone Publishing agreement, both coming soon. No money moves here.</Local>
+    <Local>Versions and splits are saved on this device. There are no accounts and no money moves here.</Local>
     <div className="fx-split">
       <aside className="glass pad fx-card"><h3>Projects</h3>{docs.map(x => <button key={x.id} className={`fx-li ${x.id === cur ? 'on' : ''}`} onClick={() => setCur(x.id)}>{x.title}<small>{x.versions.length} versions · {x.authors.length} authors</small></button>)}
         <button className="btn ghost sm mt" onClick={() => { const t = prompt('Remix title'); if (!t) return; const n: Collab = { id: uid(), title: t, authors: [{ name: who || 'You', share: 100 }], versions: [] }; setDocs([...docs, n]); setCur(n.id); }}>+ New remix</button></aside>
@@ -234,7 +234,7 @@ export function Contest() {
   const key = `contest:${d.getFullYear()}-${d.getMonth() + 1}`; const [entry, setEntry] = useStored<{ title: string; text: string } | null>(key, null); const [open, setOpen] = useState(false); const [f, setF] = useState(entry ?? { title: '', text: '' });
   return <section className="section fx-contest"><div className="glass pad fx-contest-in">
     <div><div className="eyebrow">{month} contest</div><h2 className="display">{prompt}</h2><p className="lede">Any public-domain book is fair game. Entries close {left <= 0 ? 'tonight at midnight' : <>on {end.toLocaleDateString('en', { month: 'long', day: 'numeric' })}, {left} {left === 1 ? 'day' : 'days'} from now</>}.</p>
-      <p className="small muted">Prize to be announced. Public entry and judging open when accounts launch; until then your entry is saved as a draft on this device.</p>
+      <p className="small muted">Prize to be announced. Your entry is saved as a draft on this device; no account needed.</p>
       <div className="row gap wrap"><button className="btn gold" onClick={() => setOpen(!open)}>{entry ? 'Edit your draft entry' : 'Draft an entry'}</button><Link className="btn ghost" to="/studio/remix">Open the Studio</Link></div></div>
     <div className="fx-contest-side"><b>Entries so far</b><p className="small muted">{entry ? '1 draft (yours, on this device). Public entries appear here once submissions open.' : 'None yet. Public entries appear here once submissions open.'}</p></div>
     {open && <div className="fx-entry"><input className="fx-in" placeholder="Title" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} /><textarea className="fx-in fx-ta" placeholder="Your entry…" value={f.text} onChange={e => setF({ ...f, text: e.target.value })} /><button className="btn gold sm" disabled={!f.title} onClick={() => { setEntry(f); setOpen(false); }}>Save draft</button></div>}

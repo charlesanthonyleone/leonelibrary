@@ -108,7 +108,7 @@ export default function Reader() {
           <label className="lbl">Voice</label><select className="fx-in" value={voice} onChange={e => setVoice(e.target.value)}><option value="">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</select>
           <label className="lbl">Speed: {rate.toFixed(2)}×</label><input type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
           <button className="btn gold sm" onClick={() => speak(Math.max(0, para))}>{speaking ? 'Restart with these settings' : '▶ Start narration'}</button>
-          <p className="tiny muted">AI studio voices (natural narrators, character voices) are coming with AI credits. <Soon /></p></>}
+          <p className="tiny muted">AI studio voices (natural narrators, character voices) are not connected yet. <Soon /></p></>}
         {panel === 'notes' && hl.length > 0 && <button className="btn ghost sm" onClick={shareNotes}>Share notes as a link</button>}
       </aside>}
       <article className="page-paper" ref={pageRef}>

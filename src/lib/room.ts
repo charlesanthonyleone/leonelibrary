@@ -34,9 +34,9 @@ export const useRoom = () => {
   return [{ ...fromPreset('study'), ...r, decor: { ...D0, ...r.decor } }, set] as const;
 };
 
-/** Plan state is a local demo flag only: there is no checkout and nothing is charged. */
+/** Leone Library is free and open source: every tool is unlocked for everyone, with no accounts or paid tiers. */
 export type Plan = 'free' | 'editor-demo';
-export const usePlan = () => useStored<Plan>('plan', 'free');
+export const usePlan = () => { const [, set] = useStored<Plan>('plan', 'editor-demo'); return ['editor-demo' as Plan, set] as const; };
 
 // ---- safety: user CSS/HTML never runs script and never escapes the room ----
 const BAD_TAGS = 'script,iframe,frame,frameset,object,embed,applet,link,meta,base,form,input,button,textarea,select,option,style,template,noscript,portal,audio,video,source,track,math';
