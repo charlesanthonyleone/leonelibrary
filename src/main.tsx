@@ -1,3 +1,5 @@
+import '@fontsource/opendyslexic/400.css';
+import '@fontsource/atkinson-hyperlegible/400.css';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -5,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import MountainSky from './components/MountainSky';
 import { Footer, Nav, useUiMotion } from './components/ui';
 import Home from './pages/Home';
+import Add from './pages/Add';
 import Library from './pages/Library';
 import BookPage from './pages/Book';
 import Reader from './pages/Reader';
@@ -68,6 +71,7 @@ function App() {
           <Route path="/community" element={<Community />} />
           <Route path="/storefront" element={<Storefront />} />
           <Route path="/rights" element={<Rights />} />
+          <Route path="/add" element={<Add />} />
           <Route path="*" element={<NotFound />} />
         </Routes></ErrorBoundary>
       </main>

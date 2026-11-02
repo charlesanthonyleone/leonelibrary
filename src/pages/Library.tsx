@@ -1,62 +1,69 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getSnapshot, LANGS, searchBooks, type Book } from '../lib/books';
+import { getCatalog, langName, toBook, type CatEntry } from '../lib/books';
 import BookCard from '../components/BookCard';
+
+const PER = 48;
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const LEN: Record<string, [number, number, string]> = { short: [0, 40000, 'Short (under 40k words)'], mid: [40000, 120000, 'Novel length'], long: [120000, 1e9, 'Long (120k+ words)'] };
 
 export default function Library() {
   const [sp, setSp] = useSearchParams();
-  const q = sp.get('q') ?? '', lang = sp.get('lang') ?? '', page = Number(sp.get('page') ?? 1);
+  const q = sp.get('q') ?? '', lang = sp.get('lang') ?? '', shelf = sp.get('shelf') ?? '', len = sp.get('len') ?? '', sort = sp.get('sort') ?? 'popular', page = Number(sp.get('page') ?? 1);
   const [input, setInput] = useState(q);
-  const [books, setBooks] = useState<Book[]>([]);
-  const [count, setCount] = useState<number | null>(null);
-  const [next, setNext] = useState(false);
-  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
-  const [source, setSource] = useState<'live' | 'snapshot'>('snapshot');
-  const ctl = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    ctl.current?.abort(); const c = new AbortController(); ctl.current = c;
-    setState('loading');
-    getSnapshot().then(s => {
-      if (c.signal.aborted) return;
-      const ql = q.toLowerCase();
-      const hits = s.results.filter(b => (!lang || b.languages.includes(lang)) && (!ql || (b.title + ' ' + b.authors.map(a => a.name).join(' ')).toLowerCase().includes(ql)));
-      if (hits.length && page === 1) { setBooks(hits); setSource('snapshot'); }
-    }).catch(() => {});
-    searchBooks({ search: q || undefined, lang: lang || undefined, page }, c.signal)
-      .then(r => { if (c.signal.aborted) return; setBooks(r.results); setCount(r.count); setNext(!!r.next); setSource('live'); setState('idle'); })
-      .catch(() => { if (!c.signal.aborted) setState('error'); });
-    return () => c.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, lang, page]);
-
-  const go = (p: Record<string, string>) => { const n = new URLSearchParams(sp); Object.entries(p).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); setSp(n); };
+  const [cat, setCat] = useState<CatEntry[] | null>(null);
+  useEffect(() => { getCatalog().then(setCat).catch(() => setCat([])); }, []);
+  useEffect(() => setInput(q), [q]);
+  const facets = useMemo(() => {
+    const L = new Map<string, number>(), S = new Map<string, number>();
+    cat?.forEach(c => { c.lang.forEach(l => L.set(l, (L.get(l) ?? 0) + 1)); c.shelves.forEach(s => S.set(s, (S.get(s) ?? 0) + 1)); });
+    return { langs: [...L].sort((a, b) => b[1] - a[1]), shelves: [...S].filter(s => s[1] >= 5).sort((a, b) => a[0].localeCompare(b[0])) };
+  }, [cat]);
+  const hits = useMemo(() => {
+    if (!cat) return [];
+    const terms = norm(q).split(/\s+/).filter(Boolean);
+    let r = cat.filter(c => (!lang || c.lang.includes(lang)) && (!shelf || c.shelves.includes(shelf)) && (!len || (c.words >= LEN[len][0] && c.words < LEN[len][1])));
+    if (terms.length) {
+      const scored = r.map(c => { const t = norm(c.title), a = norm(c.author + ' ' + c.authors.map(x => x.name).join(' ')), s = norm(c.subjects.join(' ') + ' ' + c.shelves.join(' '));
+        let sc = 0; for (const w of terms) { if (t.includes(w)) sc += 3; else if (a.includes(w)) sc += 2; else if (s.includes(w)) sc += 1; else return null; } return [c, sc] as const; }).filter(Boolean) as (readonly [CatEntry, number])[];
+      r = scored.sort((x, y) => y[1] - x[1] || y[0].downloads - x[0].downloads).map(x => x[0]);
+    }
+    if (sort === 'title') r = [...r].sort((a, b) => a.title.localeCompare(b.title));
+    else if (sort === 'author') r = [...r].sort((a, b) => a.author.localeCompare(b.author));
+    else if (sort === 'short') r = [...r].sort((a, b) => a.words - b.words);
+    else if (!terms.length) r = [...r].sort((a, b) => b.downloads - a.downloads);
+    return r;
+  }, [cat, q, lang, shelf, len, sort]);
+  const go = (p: Record<string, string>) => { const n = new URLSearchParams(sp); Object.entries(p).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); if (!('page' in p)) n.delete('page'); setSp(n); };
+  const pages = Math.max(1, Math.ceil(hits.length / PER));
+  const shown = hits.slice((page - 1) * PER, page * PER);
   return (
     <div className="page">
       <div className="eyebrow">The Library</div>
       <h1 className="display">The Open Library</h1>
-      <p className="lede">Live search of Project Gutenberg's public-domain catalogue. Standard Ebooks, Internet Archive and Wikisource indexing is next.</p>
-      <form className="searchbar glass" onSubmit={e => { e.preventDefault(); go({ q: input.trim(), page: '' }); }}>
-        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Search titles or authors: Tolstoy, Austen, Holmes…" aria-label="Search the library" />
-        <select value={lang} onChange={e => go({ lang: e.target.value, page: '' })} aria-label="Language">
+      <p className="lede">{cat ? cat.length.toLocaleString() : '…'} complete public-domain books, every one hosted here in full and readable right now. Want something that isn't here? <a href="/add">Request it</a>.</p>
+      <form className="searchbar glass" role="search" onSubmit={e => { e.preventDefault(); go({ q: input.trim() }); }}>
+        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Search titles, authors or subjects: Tolstoy, whales, detective…" aria-label="Search the library" />
+        <select value={lang} onChange={e => go({ lang: e.target.value })} aria-label="Language">
           <option value="">All languages</option>
-          {Object.entries(LANGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {facets.langs.map(([k, n]) => <option key={k} value={k}>{langName(k)} ({n})</option>)}
         </select>
         <button className="btn gold">Search</button>
       </form>
-      <div className="status small muted">
-        {state === 'loading' && <span><span className="spin" /> Searching Gutenberg live{books.length ? ' — showing instant results from our cached catalogue meanwhile' : '…'}</span>}
-        {state === 'idle' && count !== null && <span>{count.toLocaleString()} public-domain books{q && <> for “{q}”</>}{lang && <> in {LANGS[lang]}</>} · live from Gutendex</span>}
-        {state === 'error' && <span>Gutendex didn't answer in time. Showing the cached catalogue{books.length ? '' : ' (no matches)'}. <button className="link" onClick={() => go({ page: String(page) })}>Retry</button></span>}
+      <div className="row gap wrap filters">
+        <select className="fx-in" value={shelf} onChange={e => go({ shelf: e.target.value })} aria-label="Shelf"><option value="">All shelves</option>{facets.shelves.map(([s, n]) => <option key={s} value={s}>{s} ({n})</option>)}</select>
+        <select className="fx-in" value={len} onChange={e => go({ len: e.target.value })} aria-label="Length"><option value="">Any length</option>{Object.entries(LEN).map(([k, v]) => <option key={k} value={k}>{v[2]}</option>)}</select>
+        <select className="fx-in" value={sort} onChange={e => go({ sort: e.target.value === 'popular' ? '' : e.target.value })} aria-label="Sort"><option value="popular">Most read</option><option value="title">Title A–Z</option><option value="author">Author A–Z</option><option value="short">Shortest first</option></select>
+        {(q || lang || shelf || len) && <button className="btn ghost sm" onClick={() => { setInput(''); setSp(new URLSearchParams()); }}>Clear</button>}
       </div>
-      <div className="grid-books">{books.map(b => <BookCard key={b.id} b={b} />)}</div>
-      {source === 'live' && (page > 1 || next) && (
-        <div className="row gap center pager">
-          <button className="btn ghost" disabled={page <= 1} onClick={() => go({ page: String(page - 1) })}>← Previous</button>
-          <span className="muted">Page {page}</span>
-          <button className="btn ghost" disabled={!next} onClick={() => go({ page: String(page + 1) })}>Next →</button>
-        </div>
-      )}
+      <div className="status small muted" aria-live="polite">{!cat ? <span><span className="spin" /> Opening the catalogue…</span> : <span>{hits.length.toLocaleString()} book{hits.length === 1 ? '' : 's'}{q && <> for “{q}”</>}{lang && <> in {langName(lang)}</>}{shelf && <> on {shelf}</>} · all complete, all free</span>}</div>
+      <div className="grid-books">{shown.map(c => <BookCard key={c.id} b={toBook(c)} />)}</div>
+      {cat && !hits.length && <p className="muted">Nothing matches yet. <a href="/add">Ask for this book</a> — readers' requests are imported once they reach 10 votes.</p>}
+      {pages > 1 && <div className="row gap center pager">
+        <button className="btn ghost" disabled={page <= 1} onClick={() => { go({ page: String(page - 1) }); window.scrollTo(0, 0); }}>← Previous</button>
+        <span className="muted">Page {page} of {pages}</span>
+        <button className="btn ghost" disabled={page >= pages} onClick={() => { go({ page: String(page + 1) }); window.scrollTo(0, 0); }}>Next →</button>
+      </div>}
     </div>
   );
 }

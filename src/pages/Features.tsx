@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { load, save, uid, useShelf, useStored, type Highlight, type Progress } from '../lib/store';
 import { PRESETS3D, makeLayout, encodeLayout, decodeLayout, type Layout } from '../lib/layout';
 import { THEMES } from '../lib/store';
-import { getText, parseText } from '../lib/books';
+import { getChapters } from '../lib/books';
 import { buildEpub, download, today } from '../lib/epub';
 import { usePlan } from '../lib/room';
 import { STARTER } from './Shelf';
@@ -71,7 +71,7 @@ export function Clubs() {
   const bs = useBooks(); const [clubs, setClubs] = useStored<Club[]>('clubs', []); const [cur, setCur] = useState<string>(''); const [me, setMe] = useStored('club-name', '');
   const [f, setF] = useState({ name: '', book: String(bs[0].id), start: today(), perWeek: 3 });
   useEffect(() => { const m = location.hash.match(/club=([^&]+)/); if (!m) return; try { const c = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))))) as Club; if (!clubs.find(x => x.id === c.id)) setClubs([...clubs, { ...c, posts: [] }]); setCur(c.id); history.replaceState(null, '', location.pathname); } catch { /* bad link */ } }, []); // eslint-disable-line
-  const create = async () => { const b = bookOf(bs, f.book); let chapters = 20; try { chapters = parseText(await getText(Number(b.id))).chapters.length || 20; } catch { /* text not cached: default */ }
+  const create = async () => { const b = bookOf(bs, f.book); let chapters = 20; try { chapters = (await getChapters(Number(b.id))).length || 20; } catch { /* text not cached: default */ }
     const c: Club = { id: uid(), name: f.name || `${b.title} club`, book: String(b.id), title: b.title, start: f.start, perWeek: f.perWeek, chapters, posts: [] }; setClubs([...clubs, c]); setCur(c.id); };
   const c = clubs.find(x => x.id === cur);
   const upd = (n: Club) => setClubs(clubs.map(x => (x.id === n.id ? n : x)));
@@ -205,8 +205,8 @@ export function CollabStudio() {
 export function ExportPage() {
   const bs = useBooks(); const [pick, setPick] = useState(String(bs[0].id)); const [state, setState] = useState(''); const [trim, setTrim] = useState('5.5x8.5'); const [paper, setPaper] = useState<'cream' | 'white'>('cream'); const [pages, setPages] = useState(320);
   const b = bookOf(bs, pick);
-  const getCh = async () => { const t = await getText(Number(b.id)); const p = parseText(t).chapters; const ed = load<{ chapter: number; para: number; text: string }[]>(`edits:${b.id}`, []); return p.map((c, ci) => ({ ...c, paras: c.paras.map((x, pi) => ed.find(e => e.chapter === ci && e.para === pi)?.text ?? x) })); };
-  const epub = async () => { setState('Building EPUB…'); try { const ch = await getCh(); download(buildEpub({ title: b.title, author: b.author, lang: 'en', source: 'Project Gutenberg' }, ch), `${b.title.replace(/[^\w]+/g, '-')}.epub`); setState(`EPUB ready: ${ch.length} chapters, including your edits.`); } catch { setState('This text isn’t in the cached collection yet, so it can’t be exported in the browser.'); } };
+  const getCh = async () => { const p = await getChapters(Number(b.id)); const ed = load<{ chapter: number; para: number; text: string }[]>(`edits:${b.id}`, []); return p.map((c, ci) => ({ ...c, paras: c.paras.map((x, pi) => ed.find(e => e.chapter === ci && e.para === pi)?.text ?? x) })); };
+  const epub = async () => { setState('Building EPUB…'); try { const ch = await getCh(); download(buildEpub({ title: b.title, author: b.author, lang: 'en', source: 'Leone Library (public domain)' }, ch), `${b.title.replace(/[^\w]+/g, '-')}.epub`); setState(`EPUB ready: ${ch.length} chapters, including your edits.`); } catch { setState('This book isn’t hosted in the Library, so it can’t be exported.'); } };
   const pdf = async () => { setState('Preparing print layout…'); try { const ch = await getCh(); const w = window.open('', '_blank'); if (!w) return setState('Allow pop-ups to open the print layout.'); const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     w.document.write(`<!doctype html><title>${e(b.title)}</title><style>@page{size:${trim.replace('x', 'in ')}in;margin:.7in .6in}body{font:11.5pt/1.5 Georgia,serif;color:#111}h1{text-align:center;margin-top:35%;font-weight:normal;font-size:28pt}h2{page-break-before:always;text-align:center;font-weight:normal;margin:1.2in 0 .4in}p{margin:0;text-indent:1.4em;text-align:justify}.a{text-align:center;text-indent:0}</style><h1>${e(b.title)}</h1><p class="a">${e(b.author)}</p>${ch.map(c => `<h2>${e(c.title)}</h2>${c.paras.map(p => `<p>${e(p)}</p>`).join('')}`).join('')}<script>setTimeout(()=>print(),400)<\/script>`); w.document.close(); setState('Print layout opened. Choose “Save as PDF” in the print dialog.'); } catch { setState('This text isn’t in the cached collection yet.'); } };
   const [tw, th] = trim.split('x').map(Number); const ppi = paper === 'cream' ? 0.0025 : 0.002252; const spine = pages * ppi; const coverW = tw * 2 + spine + 0.25;

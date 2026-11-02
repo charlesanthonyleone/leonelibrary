@@ -13,7 +13,7 @@ import BookHUD from '../components/BookHUD';
 import ReaderTab from '../components/ReaderTab';
 import { DEFAULT_LOOK, type ReaderLook } from '../lib/reader3d';
 import type { ReadState } from '../three/reading';
-import { getText, parseText, type Chapter } from '../lib/books';
+import { getChapters, type Chapter } from '../lib/books';
 import { save, useStored, type Edit } from '../lib/store';
 import { logReading } from './Features';
 
@@ -62,8 +62,8 @@ export default function Shelf() {
   const openBook = (id: string) => {
     if (!lib.current?.open(id, look)) return; setChs(null); active.current = Date.now();
     const n = Number(id); if (!Number.isFinite(n)) { lib.current.setText(null, 'This book has no text attached yet.'); return; }
-    getText(n).then(raw => { const ed = load<Edit[]>(`edits:${n}`, []);
-      const c = parseText(raw).chapters.map((c, ci) => ({ ...c, paras: c.paras.map((p, pi) => ed.find(e => e.chapter === ci && e.para === pi)?.text ?? p) }));
+    getChapters(n).then(raw => { const ed = load<Edit[]>(`edits:${n}`, []);
+      const c = raw.map((c, ci) => ({ ...c, paras: c.paras.map((p, pi) => ed.find(e => e.chapter === ci && e.para === pi)?.text ?? p) }));
       setChs(c); lib.current?.setText(c, '', load<{ ch: number; para: number } | null>(`bookmark:${n}`, null)); })
       .catch(() => lib.current?.setText(null, 'The text could not be loaded right now. Check your connection, or open it in the classic reader.'));
   };

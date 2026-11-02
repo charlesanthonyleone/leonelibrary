@@ -5,7 +5,7 @@ import { STARTER } from './Shelf';
 import { Contest } from './Features';
 
 const ROOMS = [
-  { n: 'I', to: '/library', t: 'The Library', d: 'Tens of thousands of public-domain classics from Project Gutenberg, free to read in a reader you can make your own.' },
+  { n: 'I', to: '/library', t: 'The Library', d: 'Thousands of complete public-domain classics, hosted in full and free to read in a reader you can make your own.' },
   { n: 'II', to: '/studio', t: 'The Studio', d: 'Translate from the original, put yourself in the story, or write the sequel the author never did.' },
   { n: 'III', to: '/publishing', t: 'Leone Publishing', d: 'Print-on-demand and ebook distribution. You keep 85–90% of net royalties, nothing up front.' },
   { n: 'IV', to: '/shelf', t: 'My Shelf', d: 'A personal 3D library. Glass, walnut, snowfall, a waterfall, or anything HTML and CSS can draw.' },

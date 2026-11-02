@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import { author, getBook, getText, langName, LANGS, parseText, rightsFor, wikisourceSearch, wikisourceText, type Book } from '../lib/books';
+import { author, getBook, getChapters, langName, LANGS, rightsFor, type Book } from '../lib/books';
 import { runAI } from '../lib/ai';
 import { AIStub, RightsTag, Soon } from '../components/ui';
 import { uid, useProjects, type Project } from '../lib/store';
@@ -29,7 +29,6 @@ function useSaveProject() {
 
 type Src = { key: string; label: string; lang: string; kind: 'pg' | 'ws'; id?: number; title?: string };
 const PRESETS: Src[] = [
-  { key: 'ws:Белые ночи (Достоевский)', label: 'Белые ночи · White Nights — Dostoevsky (1848)', lang: 'ru', kind: 'ws', title: 'Белые ночи (Достоевский)' },
   { key: 'pg:22367', label: 'Die Verwandlung — Kafka (1915)', lang: 'de', kind: 'pg', id: 22367 },
   { key: 'pg:4650', label: "Candide, ou l'optimisme — Voltaire (1759)", lang: 'fr', kind: 'pg', id: 4650 },
 ];
@@ -58,14 +57,13 @@ export function Translate() {
     setSrcs(x => x.some(y => y.key === s.key) ? x : [s, ...x]); setSrcKey(s.key); }).catch(() => {}); }, [qid]);
   useEffect(() => {
     let live = true; setState('loading'); setParas(null); setRun('idle');
-    const p = src.kind === 'ws' ? wikisourceText(src.lang, src.title!) : getText(src.id!).then(t => parseText(t).chapters.flatMap(c => [c.title, ...c.paras]));
+    const p = getChapters(src.id!).then(cs => cs.flatMap(c => [c.title, ...c.paras]));
     p.then(x => { if (live) { setParas(x); setState('ok'); } }).catch(() => live && setState('err'));
     return () => { live = false; };
   }, [src.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const words = useMemo(() => paras?.join(' ').split(/\s+/).length ?? 0, [paras]);
   const segs = paras?.slice(0, 14) ?? [];
-  const searchWs = async () => { if (!wsq.trim()) return; try { setWsHits(await wikisourceSearch('ru', wsq)); } catch { setWsHits([]); } };
   const go = async () => { setRun('running'); await runAI({ kind: 'translate', input: segs.join('\n'), options: { target, style, scope } }); setRun('stub');
     const p = save({ kind: 'translation', title: `${src.label.split(' — ')[0]} (${langName(target)}, ${style})`, sourceId: src.id ?? src.key, sourceTitle: src.label, detail: `${langName(src.lang)} → ${langName(target)} · ${style} · ${scope}` }); setSaved(p.title); };
 
@@ -79,10 +77,7 @@ export function Translate() {
         <div className="glass pad">
           <h3>1 · Original text</h3>
           <label>Source<select value={srcKey} onChange={e => setSrcKey(e.target.value)}>{srcs.map(s => <option key={s.key} value={s.key}>{s.label} · {langName(s.lang)}</option>)}</select></label>
-          <div className="small muted">{src.kind === 'ws' ? <>From Russian Wikisource (public domain). <a href={`https://ru.wikisource.org/wiki/${encodeURIComponent(src.title!)}`} target="_blank" rel="noreferrer">View source ↗</a></> : <>From Project Gutenberg #{src.id}.</>} {qBook && src.id === qBook.id && <RightsTag r={rightsFor(qBook)} />}</div>
-          <form className="row gap mt" onSubmit={e => { e.preventDefault(); searchWs(); }}><input value={wsq} onChange={e => setWsq(e.target.value)} placeholder="Search Russian Wikisource: Толстой, Чехов…" /><button className="btn ghost sm">Find</button></form>
-          {wsHits.length > 0 && <ul className="ws-hits">{wsHits.map(h => <li key={h.title}><button className="link" onClick={() => { const s: Src = { key: `ws:${h.title}`, label: h.title, lang: 'ru', kind: 'ws', title: h.title }; setSrcs(x => x.some(y => y.key === s.key) ? x : [s, ...x]); setSrcKey(s.key); setWsHits([]); }}>{h.title}</button> <span className="tiny muted">{h.wordcount.toLocaleString()} words</span></li>)}</ul>}
-          <p className="tiny muted">Check the first-publication year (1930 or earlier) for anything you find here.</p>
+          <div className="small muted"><>From Leone Library book #{src.id}, complete and public domain worldwide.</> {qBook && src.id === qBook.id && <RightsTag r={rightsFor(qBook)} />}</div>
           <h3 className="mt">2 · Style</h3>
           <label>Into<select value={target} onChange={e => setTarget(e.target.value)}>{Object.entries(LANGS).filter(([k]) => k !== src.lang).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
           <div className="radio-cards">{(Object.keys(STYLES) as (keyof typeof STYLES)[]).map(k => <button key={k} className={style === k ? 'on' : ''} onClick={() => setStyle(k)}><b>{k[0].toUpperCase() + k.slice(1)}</b><span>{STYLES[k].split(': ')[1]}</span></button>)}</div>
@@ -127,7 +122,7 @@ export function Remix() {
   const [preview, setPreview] = useState<string[]>([]);
   const [run, setRun] = useState(false);
   const save = useSaveProject();
-  useEffect(() => { if (!b) return; setLead(LEADS[b.id] ?? ''); getText(b.id).then(t => setPreview(parseText(t).chapters[0]?.paras.slice(0, 5) ?? [])).catch(() => setPreview([])); }, [b]);
+  useEffect(() => { if (!b) return; setLead(LEADS[b.id] ?? ''); getChapters(b.id).then(cs => setPreview(cs[0]?.paras.slice(0, 5) ?? [])).catch(() => setPreview([])); }, [b]);
   const swapped = preview.map(p => lead && you ? p.split(new RegExp(`\\b${lead.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g')).join(`\u0000${you}\u0000`) : p);
   return (
     <div className="page wide">

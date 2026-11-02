@@ -1,47 +1,34 @@
 export type Person = { name: string; birth_year: number | null; death_year: number | null };
 export type Book = {
   id: number; title: string; authors: Person[]; languages: string[]; subjects?: string[];
-  summaries?: string[]; formats: Record<string, string>; download_count?: number; copyright?: boolean | null;
+  summaries?: string[]; bookshelves?: string[]; words?: number; chapterCount?: number; formats: Record<string, string>; download_count?: number; copyright?: boolean | null;
 };
 export type Page = { count: number; next: string | null; results: Book[] };
 
 const BASE = import.meta.env.BASE_URL;
-let snapshot: Promise<Page & { bundled: number[] }> | null = null;
-export function getSnapshot() {
-  snapshot ??= fetch(`${BASE}data/popular.json`).then(r => r.json());
-  return snapshot;
+/** Catalogue entry: only books whose complete text is hosted on Leone Library are listed. */
+export type CatEntry = { id: number; title: string; author: string; authors: Person[]; lang: string[]; subjects: string[]; shelves: string[]; downloads: number; cover: boolean; words: number; chapters: number };
+let catalog: Promise<CatEntry[]> | null = null;
+export function getCatalog() {
+  catalog ??= fetch(`${BASE}data/catalog.json`).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
+  catalog.catch(() => { catalog = null; });
+  return catalog;
 }
-export async function isBundled(id: number) { return (await getSnapshot()).bundled.includes(id); }
-
-async function withTimeout(url: string, ms: number, signal?: AbortSignal) {
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), ms);
-  signal?.addEventListener('abort', () => ctl.abort());
-  try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r; }
-  finally { clearTimeout(t); }
+export const toBook = (c: CatEntry): Book => ({ id: c.id, title: c.title, authors: c.authors, languages: c.lang, subjects: c.subjects, bookshelves: c.shelves, download_count: c.downloads, copyright: false, formats: c.cover ? { 'image/jpeg': `${BASE}covers/${c.id}.jpg` } : {}, words: c.words, chapterCount: c.chapters });
+/** Compatibility shim for older callers: the whole hosted catalogue. */
+export async function getSnapshot(): Promise<Page & { bundled: number[] }> {
+  const c = await getCatalog();
+  return { count: c.length, next: null, results: c.map(toBook), bundled: c.map(x => x.id) };
 }
+export async function isBundled(id: number) { return (await getCatalog()).some(c => c.id === id); }
 
 export const LANGS: Record<string, string> = { en: 'English', fr: 'French', de: 'German', ru: 'Russian', es: 'Spanish', it: 'Italian', pt: 'Portuguese', nl: 'Dutch', fi: 'Finnish', zh: 'Chinese', la: 'Latin', el: 'Greek', sv: 'Swedish', ja: 'Japanese', pl: 'Polish', da: 'Danish', hu: 'Hungarian', eo: 'Esperanto' };
 export const langName = (c: string) => LANGS[c] ?? c.toUpperCase();
 
-/** Live Gutendex search. Gutendex can be slow, so callers show the bundled snapshot meanwhile. */
-export async function searchBooks(q: { search?: string; lang?: string; topic?: string; page?: number }, signal?: AbortSignal): Promise<Page> {
-  const p = new URLSearchParams();
-  if (q.search) p.set('search', q.search);
-  if (q.lang) p.set('languages', q.lang);
-  if (q.topic) p.set('topic', q.topic);
-  if (q.page && q.page > 1) p.set('page', String(q.page));
-  p.set('copyright', 'false');
-  const r = await withTimeout(`https://gutendex.com/books/?${p}`, 45000, signal);
-  return r.json();
-}
-
 export async function getBook(id: number): Promise<Book> {
-  const snap = await getSnapshot();
-  const hit = snap.results.find(b => b.id === id);
-  if (hit) return hit;
-  const r = await withTimeout(`https://gutendex.com/books/${id}`, 45000);
-  return r.json();
+  const hit = (await getCatalog()).find(b => b.id === id);
+  if (!hit) throw new Error('This book is not in the Library.');
+  return toBook(hit);
 }
 
 export const cover = (b: Book) => b.formats['image/jpeg'];
@@ -49,11 +36,11 @@ export const author = (b: Book) => b.authors[0]?.name.replace(/^([^,]+),\s*(.+?)
 
 /** Rights/provenance tag. US PD rule for 2026: first published 1930 or earlier. */
 export type Rights = { tag: string; tone: 'ok' | 'check' | 'no'; detail: string };
+export const PD_DEATH_CUTOFF = new Date().getFullYear() - 71; // life+70: author died 1955 or earlier (2026)
 export function rightsFor(b: Book): Rights {
-  if (b.copyright) return { tag: 'Copyright noted', tone: 'no', detail: 'Project Gutenberg flags this edition as carrying copyright. Excluded from remix and publishing.' };
-  const a = b.authors[0];
-  if (a?.death_year && a.death_year <= 1930) return { tag: 'US Public Domain', tone: 'ok', detail: `Author died ${a.death_year}; every work they published is pre-1931. Source: Project Gutenberg.` };
-  return { tag: 'US Public Domain · verify year', tone: 'check', detail: 'Project Gutenberg lists this as public domain in the USA. Confirm the first-publication year is 1930 or earlier before publishing a derivative.' };
+  const ds = b.authors.map(a => a.death_year).filter((y): y is number => y != null);
+  const last = ds.length ? Math.max(...ds) : null;
+  return { tag: 'Public domain worldwide', tone: 'ok', detail: `${last ? `Author died ${last}, more than 70 years ago (life+70 rule), ` : ''}and first published before 1931 (US rule). Listed only because both checks pass.` };
 }
 
 export type Chapter = { title: string; paras: string[] };
@@ -91,30 +78,37 @@ export function parseText(raw: string): { front: string; chapters: Chapter[] } {
   return { front, chapters: real };
 }
 
-const textCache = new Map<number, Promise<string>>();
-/** Bundled same-origin snapshot first; gutenberg.org sends no CORS headers so a live fetch usually fails. */
-export function getText(id: number): Promise<string> {
-  if (!textCache.has(id)) {
-    textCache.set(id, (async () => {
-      if (await isBundled(id)) return (await fetch(`${BASE}texts/${id}.txt`)).text();
-      const r = await withTimeout(`https://www.gutenberg.org/cache/epub/${id}/pg${id}.txt`, 20000);
-      return r.text();
+export type HostedBook = { id: number; title: string; author: string; lang: string; words: number; source: string; sha: string; chapters: { t: string; p: string[] }[] };
+const bookCache = new Map<number, Promise<HostedBook>>();
+/** Complete, cleaned text hosted on Leone Library (gzip JSON, decompressed in the browser). */
+export function getHosted(id: number): Promise<HostedBook> {
+  if (!bookCache.has(id)) {
+    bookCache.set(id, (async () => {
+      if (!(await isBundled(id))) throw new Error('not-hosted');
+      const r = await fetch(`${BASE}books/${id}.json.gz`);
+      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+      const enc = r.headers.get('content-encoding');
+      const txt = enc && enc.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
+      return JSON.parse(txt) as HostedBook;
     })());
-    textCache.get(id)!.catch(() => textCache.delete(id));
+    bookCache.get(id)!.catch(() => bookCache.delete(id));
   }
-  return textCache.get(id)!;
+  return bookCache.get(id)!;
+}
+export async function getChapters(id: number): Promise<Chapter[]> {
+  return (await getHosted(id)).chapters.map(c => ({ title: c.t, paras: c.p }));
+}
+/** Plain text of the whole book (title + chapters), for tools that want a string. */
+export async function getText(id: number): Promise<string> {
+  const h = await getHosted(id);
+  return h.chapters.map(c => `${c.t}\n\n${c.p.join('\n\n')}`).join('\n\n');
 }
 
-/** Russian Wikisource (CORS-enabled MediaWiki API) for PD originals like Dostoevsky. */
-export async function wikisourceSearch(lang: string, q: string) {
-  const r = await withTimeout(`https://${lang}.wikisource.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=8&format=json&origin=*`, 20000);
-  const j = await r.json();
-  return (j.query?.search ?? []) as { title: string; wordcount: number; pageid: number }[];
-}
-export async function wikisourceText(lang: string, title: string) {
-  const r = await withTimeout(`https://${lang}.wikisource.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=text&format=json&formatversion=2&origin=*`, 25000);
-  const j = await r.json();
-  const doc = new DOMParser().parseFromString(j.parse?.text ?? '', 'text/html');
-  doc.querySelectorAll('table, .ws-noexport, sup, style, .mw-editsection, .navbox, .ws-header, #headertemplate').forEach(n => n.remove());
-  return Array.from(doc.querySelectorAll('p')).map(p => p.textContent?.trim() ?? '').filter(t => t.length > 30);
-}
+
+/* ---- offline library ---- */
+const BOOKS_CACHE = 'leone-books';
+const bookUrls = (id: number) => [`${BASE}books/${id}.json.gz`, `${BASE}covers/${id}.jpg`];
+export async function isOffline(id: number) { if (!('caches' in window)) return false; const c = await caches.open(BOOKS_CACHE); return !!(await c.match(bookUrls(id)[0])); }
+export async function keepOffline(id: number) { const c = await caches.open(BOOKS_CACHE); await c.add(bookUrls(id)[0]); await c.add(bookUrls(id)[1]).catch(() => {}); }
+export async function dropOffline(id: number) { const c = await caches.open(BOOKS_CACHE); await Promise.all(bookUrls(id).map(u => c.delete(u))); }
+export async function offlineIds(): Promise<number[]> { if (!('caches' in window)) return []; const c = await caches.open(BOOKS_CACHE); return (await c.keys()).map(r => r.url.match(/books\/(\d+)\.json\.gz/)?.[1]).filter(Boolean).map(Number); }

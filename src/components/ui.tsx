@@ -39,14 +39,14 @@ export function Footer() {
       <div className="footer-in">
         <div><div className="brand-word big">Leone <em>Library</em></div><p className="muted small">The Library of Leone University. <a href="https://leoneuniversity.org">Leone University</a> · <a href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">♥ Donate</a></p></div>
         <div className="foot-cols">
-          <div><h5>Read</h5><Link to="/library">The Library</Link><Link to="/shelf">My Shelf</Link><Link to="/goals">Reading goals</Link><Link to="/clubs">Book clubs</Link><Link to="/design">Design</Link></div>
+          <div><h5>Read</h5><Link to="/library">The Library</Link><Link to="/add">Request a book</Link><Link to="/shelf">My Shelf</Link><Link to="/goals">Reading goals</Link><Link to="/clubs">Book clubs</Link><Link to="/design">Design</Link></div>
           <div><h5>Create</h5><Link to="/studio/translate">Translate</Link><Link to="/studio/remix">Remix</Link><Link to="/studio/continue">Continue</Link><Link to="/studio/collab">Co-author</Link><Link to="/studio/glossary">Glossary</Link><Link to="/export">Export</Link></div>
           <div><h5>Publish</h5><Link to="/publishing">Leone Publishing</Link><Link to="/publishing/calculator">Fee calculator</Link><Link to="/publishing/submit">Submit a book</Link><Link to="/publishing/royalties">Royalties</Link></div>
           <div><h5>More</h5><Link to="/plans">Plans</Link><a href="https://leoneuniversity.org">Leone University</a><a href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">Donate</a><Link to="/marketplace">Themes</Link><Link to="/shelves">Public shelves</Link><Link to="/classroom">Classroom</Link><Link to="/community">Community</Link><Link to="/rights">Rights</Link></div>
         </div>
       </div>
       <InstallApp />
-      <p className="muted tiny center">Book data: Project Gutenberg via Gutendex, and Wikisource. Leone Library indexes US public-domain works only (first published 1930 or earlier). Rights outside the US differ.</p>
+      <p className="muted tiny center">Every book here is complete and public domain worldwide: all its authors and translators died at least 70 years ago. Texts are volunteer public-domain transcriptions, cleaned and hosted by Leone Library.</p>
     </footer>
   );
 }

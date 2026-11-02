@@ -45,7 +45,7 @@ export function paginate(meta: { title: string; author: string }, chapters: Chap
     y += L.size * 1.6; lines.push({ t: ['—'], x: M, y, w: inner, just: false, f: 0, c: true }); y += L.size * 2;
     for (const l of wrapC(meta.author, mb, inner)) { lines.push({ t: l, x: M, y, w: inner, just: false, f: 0, c: true }); y += lineH; }
     lines.push({ t: ['Leone', 'Library'], x: M, y: LH - M - L.size * 2, w: inner, just: false, f: 2, c: true });
-    lines.push({ t: 'Public-domain text from Project Gutenberg'.split(' '), x: M, y: LH - M - L.size * .6, w: inner, just: false, f: 2, c: true });
+    lines.push({ t: 'Public domain worldwide · Leone Library'.split(' '), x: M, y: LH - M - L.size * .6, w: inner, just: false, f: 2, c: true });
     pages.push({ kind: 'title', ch: -1, para: 0, lines, text: `${meta.title}, by ${meta.author}.` });
     pages.push({ kind: 'blank', ch: -1, para: 0, lines: [], text: '' }); }
   if (!chapters) { pages.push({ kind: 'note', ch: -1, para: 0, lines: [{ t: (status || 'Opening the book…').split(' '), x: M, y: LH * .45, w: inner, just: false, f: 2, c: true }], text: '' }); return pages; }

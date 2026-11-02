@@ -63,7 +63,7 @@ export function Rights() {
       <h1 className="display">Every book carries its papers</h1>
       <p className="lede">Leone Library indexes US public-domain works only: as of 2026, works first published in 1930 or earlier. Each book and each derivative records:</p>
       <div className="feature-grid">
-        <div className="feature glass"><h3>Source</h3><p>Project Gutenberg, Standard Ebooks, Internet Archive or Wikisource, with a link to the exact edition.</p></div>
+        <div className="feature glass"><h3>Source</h3><p>The exact public-domain source edition it was transcribed from, with its eBook number and checksum.</p></div>
         <div className="feature glass"><h3>PD status</h3><p>A tag on every card: confirmed, needs a publication-year check, or excluded.</p></div>
         <div className="feature glass"><h3>Change log</h3><p>Every edit you make in the reader is recorded against the source text.</p></div>
         <div className="feature glass"><h3>AI tools used</h3><p>Which tools touched the text and for what, carried through to the published book.</p></div>
