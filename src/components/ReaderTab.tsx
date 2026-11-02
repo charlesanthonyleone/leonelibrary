@@ -1,6 +1,6 @@
 import { DEFAULT_LOOK, FONTS, FREE_PAPERS, PAPERS, type ReaderLook } from '../lib/reader3d';
 
-const Lock = () => null;
+const Lock = () => <span className="lock" aria-label="Editor plan">🔒</span>;
 type P = { look: ReaderLook; set: (l: ReaderLook) => void; pro: boolean; upsell: (what: string) => void; reading: boolean; onPreview: () => void };
 
 /** Edit → Reader: design the physical book every title opens into. Saved on this device. */

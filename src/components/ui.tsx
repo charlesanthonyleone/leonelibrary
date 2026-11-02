@@ -20,7 +20,7 @@ export function Nav() {
       <a className="small muted uni-link" href="https://leoneuniversity.org" title="Leone University">The Library of Leone University ↗</a>
       <button className="nav-burger" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
       <nav className={open ? 'open' : ''}>
-        {L('/library', 'Library')}{L('/shelf', 'My Shelf')}{L('/studio', 'Studio')}{L('/publishing', 'Publishing')}{L('/plans', 'Free & open')}<a className="btn gold sm" href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">♥ Donate</a>
+        {L('/library', 'Library')}{L('/shelf', 'My Shelf')}{L('/studio', 'Studio')}{L('/publishing', 'Publishing')}{L('/plans', 'Plans')}
       </nav>
     </header>
   );
@@ -37,12 +37,12 @@ export function Footer() {
   return (
     <footer className="footer">
       <div className="footer-in">
-        <div><div className="brand-word big">Leone <em>Library</em></div><p className="muted small">The Library of Leone University. Free and open source: no accounts, no paid tiers. <a href="https://leoneuniversity.org">Leone University</a> · <a href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">♥ Donate</a></p></div>
+        <div><div className="brand-word big">Leone <em>Library</em></div><p className="muted small">The Library of Leone University. <a href="https://leoneuniversity.org">Leone University</a> · <a href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">♥ Donate</a></p></div>
         <div className="foot-cols">
           <div><h5>Read</h5><Link to="/library">The Library</Link><Link to="/shelf">My Shelf</Link><Link to="/goals">Reading goals</Link><Link to="/clubs">Book clubs</Link><Link to="/design">Design</Link></div>
           <div><h5>Create</h5><Link to="/studio/translate">Translate</Link><Link to="/studio/remix">Remix</Link><Link to="/studio/continue">Continue</Link><Link to="/studio/collab">Co-author</Link><Link to="/studio/glossary">Glossary</Link><Link to="/export">Export</Link></div>
           <div><h5>Publish</h5><Link to="/publishing">Leone Publishing</Link><Link to="/publishing/calculator">Fee calculator</Link><Link to="/publishing/submit">Submit a book</Link><Link to="/publishing/royalties">Royalties</Link></div>
-          <div><h5>More</h5><Link to="/plans">Free &amp; open source</Link><a href="https://leoneuniversity.org">Leone University</a><a href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">Donate</a><Link to="/marketplace">Themes</Link><Link to="/shelves">Public shelves</Link><Link to="/classroom">Classroom</Link><Link to="/community">Community</Link><Link to="/rights">Rights</Link></div>
+          <div><h5>More</h5><Link to="/plans">Plans</Link><a href="https://leoneuniversity.org">Leone University</a><a href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">Donate</a><Link to="/marketplace">Themes</Link><Link to="/shelves">Public shelves</Link><Link to="/classroom">Classroom</Link><Link to="/community">Community</Link><Link to="/rights">Rights</Link></div>
         </div>
       </div>
       <InstallApp />

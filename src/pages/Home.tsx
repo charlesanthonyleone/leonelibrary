@@ -9,7 +9,7 @@ const ROOMS = [
   { n: 'II', to: '/studio', t: 'The Studio', d: 'Translate from the original, put yourself in the story, or write the sequel the author never did.' },
   { n: 'III', to: '/publishing', t: 'Leone Publishing', d: 'Print-on-demand and ebook distribution. You keep 85–90% of net royalties, nothing up front.' },
   { n: 'IV', to: '/shelf', t: 'My Shelf', d: 'A personal 3D library. Glass, walnut, snowfall, a waterfall, or anything HTML and CSS can draw.' },
-  { n: 'V', to: '/plans', t: 'Free & open', d: 'Everything is free and open source: no accounts, no paid tiers, no paid credits.' },
+  { n: 'V', to: '/plans', t: 'Plans', d: 'Reading is free forever. Editor plans unlock the creative tools; AI credits do the heavy lifting.' },
 ];
 const meadow = fromPreset('meadow');
 
@@ -37,7 +37,7 @@ export default function Home() {
           <div className="eyebrow">My Shelf</div>
           <h2 className="display">A library that looks like you</h2>
           <p className="lede">Choose a room or build your own: materials, lighting, plants, candles, weather. Editors can write their own HTML and CSS, and soon an AI will design it from a sentence.</p>
-          <div className="row gap wrap"><Link className="btn gold" to="/shelf">Design my shelf</Link><a className="btn ghost" href="https://github.com/sponsors/charlesanthonyleone" target="_blank" rel="noreferrer">♥ Donate</a></div>
+          <div className="row gap wrap"><Link className="btn gold" to="/shelf">Design my shelf</Link><Link className="btn ghost" to="/plans">See plans</Link></div>
         </div>
         <Room cfg={meadow} books={STARTER.slice(0, 6)} rows={1} compact />
       </section>

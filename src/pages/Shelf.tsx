@@ -36,7 +36,7 @@ export const STARTER = [
   { id: 5200, title: 'Metamorphosis', author: 'Franz Kafka' }, { id: 4300, title: 'Ulysses', author: 'James Joyce' },
   { id: 1232, title: 'The Prince', author: 'Niccolò Machiavelli' }, { id: 205, title: 'Walden', author: 'Henry David Thoreau' },
 ];
-const Lock = () => null;
+const Lock = () => <span className="lock" aria-label="Editor plan">🔒</span>;
 const CAMS: [string, Layout['cam']][] = [['Front', { az: 0, el: .08, dist: 2.7 }], ['Left', { az: -.75, el: .15, dist: 2.9 }], ['Right', { az: .7, el: .15, dist: 2.9 }], ['Close', { az: -.2, el: .05, dist: 1.5 }], ['Wide', { az: -.45, el: .22, dist: 5 }]];
 export const ambFor = (l: Layout): Amb => l.weather === 'rain' ? 'rain' : l.setting === 'outdoor' && l.view === 'meadow' ? 'falls' : l.view === 'snow' ? 'wind' : l.view === 'night' ? 'night' : 'room';
 
@@ -114,6 +114,7 @@ export default function Shelf() {
       <div className="shelf-head">
         <div><div className="eyebrow">My Shelf</div><h1 className="display">Your personal 3D library</h1>
           <p className="lede">Real wood, glass and marble under real light. Rearrange every book, place every plant and lamp, change the view out of the window, then share it with a link.</p></div>
+        <label className="demo-toggle"><input type="checkbox" checked={pro} onChange={e => setPlan(e.target.checked ? 'editor-demo' : 'free')} /> <span>Preview Editor features <small className="muted">(local demo, nothing is charged)</small></span></label>
       </div>
 
       {shared && <div className="shared-bar glass"><span>👁 Viewing a shared room: <b>{shared.name}</b> <small className="muted">(read-only preview from a link)</small></span>
@@ -236,13 +237,14 @@ export default function Shelf() {
             <textarea className="code" spellCheck={false} rows={4} value={draft.html} onChange={e => setDraft({ ...draft, html: e.target.value })} placeholder={HTML_EXAMPLE} disabled={!pro} />
             <div className="row gap wrap"><button className="btn gold sm" disabled={!pro} onClick={() => patch({ css: draft.css, html: draft.html, preset: L.preset })}>Apply to my room</button>
               <button className="btn ghost sm" disabled={!pro} onClick={() => { setDraft({ css: '', html: '' }); patch({ css: '', html: '', preset: L.preset }); }}>Clear code</button></div>
+            {!pro && <div className="gate-over"><Lock /><b>Custom HTML &amp; CSS is an Editor feature</b><Link className="btn gold sm" to="/plans">See plans</Link><button className="link small" onClick={() => setPlan('editor-demo')}>Preview it (demo)</button></div>}
           </div>}
 
           {tab === 'ai' && <div className="ctls">
             <div className="lbl">Describe your dream room <Soon /></div>
             <textarea rows={4} disabled placeholder="A cherry-wood case in a rainy Kyoto tea house, paper lanterns, moss on the lower shelf…" />
             <button className="btn gold sm" disabled>Design it for me · coming soon</button>
-            <p className="small muted">No AI model is connected, so nothing is sent anywhere. It will never need paid credits.</p>
+            <p className="small muted">The AI designer will build the layout for you with AI credits. No model is connected yet, so nothing is sent anywhere.</p>
           </div>}
           <p className="tiny muted">Every change saves on this device. Undo with Ctrl+Z.</p>
         </aside>}
@@ -255,6 +257,11 @@ export default function Shelf() {
       {projects.length > 0 && <div className="list glass pad"><h3>Studio projects</h3>{projects.map(p => <div className="list-row" key={p.id}><b>{p.title}</b><span className="muted small">{p.kind} of {p.sourceTitle}</span></div>)}</div>}
       <p className="tiny muted center credits">Textures &amp; HDRI skies: <a href="https://polyhaven.com" target="_blank" rel="noreferrer">Poly Haven</a> (CC0): dark_wood, oak_veneer_01, marble_01, laminate_floor_02, painted_plaster_wall, aerial_grass_rock, rock_face, fabric_pattern_07, lythwood_room, kloofendal_48d_partly_cloudy_puresky, snowy_park_01, satara_night. Rendering by three.js. Painting: Milky Way photo used across the site.</p>
 
+      {upsell && <div className="modal-back" onClick={() => setUpsell(null)}><div className="modal glass pad" role="dialog" aria-modal onClick={e => e.stopPropagation()}>
+        <div className="eyebrow">Editor plan</div><h3 className="display sm">{upsell} is an Editor feature</h3>
+        <p className="muted">Every room, material and view, placing and styling every object, multiple saved rooms, plus your own HTML and CSS. Reading and rearranging your books stay free forever.</p>
+        <div className="row gap wrap"><Link className="btn gold" to="/plans">See plans</Link><button className="btn ghost" onClick={() => { setPlan('editor-demo'); setUpsell(null); }}>Preview as Editor (demo)</button></div>
+      </div></div>}
     </div>
   );
 }
