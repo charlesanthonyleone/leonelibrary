@@ -14,3 +14,9 @@ No mail provider is configured, so magic-link emails are only logged. Options: a
 
 ## 8. OAuth apps
 Charles creates the Google and GitHub OAuth apps (callback: https://api.leoneuniversity.org/auth/{google,github}/callback) and puts the IDs and secrets in server/.env on the host. Nothing goes in the repo.
+
+## 9. Live Stripe key present in the box shell
+The box shell environment has a STRIPE_SECRET_KEY that starts with `sk_live`. Agents never read or use it; the server is always tested with `env -u STRIPE_SECRET_KEY`, and it refuses live keys unless STRIPE_LIVE=1. Charles: decide whether that variable should stay in the box environment.
+
+## 10. GitHub Pages size
+The deploy is about 768 MB in about 12,300 files. The GitHub Pages limit is 1 GB. Options: keep it under the limit (prune or recompress), or move books/fts to free object storage later.
