@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { author, cover, dropOffline, getBook, isOffline, keepOffline, langName, PD_DEATH_CUTOFF, rightsFor, type Book } from '../lib/books';
+import { author, cover, dropOffline, getBook, getHosted, isOffline, keepOffline, langName, PD_DEATH_CUTOFF, rightsFor, type Book } from '../lib/books';
 import { GenCover, RightsTag, hueOf, Soon } from '../components/ui';
 import { load, useProjects, useShelf, type Edit } from '../lib/store';
 
@@ -71,6 +71,17 @@ export default function BookPage() {
           <p className="small muted">Audiobook edition <Soon /></p>
         </div>
       </div>
+      <FirstPage id={b.id} />
     </div>
   );
+}
+
+function FirstPage({ id }: { id: number }) {
+  const [p, setP] = useState<{ ci: number; t: string; ps: string[] } | null>(null);
+  useEffect(() => { setP(null); getHosted(id).then(h => { const ci = Math.max(0, h.chapters.findIndex((c, i) => i > 0 || !/^opening$/i.test(c.t))); const c = h.chapters[ci] ?? h.chapters[0];
+    setP({ ci, t: c.t, ps: c.p.filter(x => x.length > 60).slice(0, 3) }); }).catch(() => {}); }, [id]);
+  if (!p || !p.ps.length) return null;
+  return <section className="glass prov first-page" aria-labelledby="fp-h"><h2 className="h3" id="fp-h">The first page</h2><p className="small muted">{p.t}</p>
+    {p.ps.map((x, i) => <p key={i} className="fp-p">{x.length > 700 ? x.slice(0, 700) + '…' : x}</p>)}
+    <Link className="btn gold sm" to={`/read?id=${id}&ch=${p.ci}`}>Keep reading</Link></section>;
 }

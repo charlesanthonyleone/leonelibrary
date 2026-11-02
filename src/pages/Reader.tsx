@@ -31,7 +31,7 @@ export default function Reader() {
   const [hl, setHl] = useStored<Highlight[]>(`highlights:${id}`, []);
   const [edits, setEdits] = useStored<Edit[]>(`edits:${id}`, []);
   const [marks, setMarks] = useStored<Bookmark[]>(`bookmarks:${id}`, []);
-  const [panel, setPanel] = useState<'none' | 'toc' | 'aa' | 'design' | 'notes' | 'voice' | 'marks' | 'find'>('none'); const [fq, setFq] = useState('');
+  const [panel, setPanel] = useState<'none' | 'toc' | 'aa' | 'design' | 'notes' | 'voice' | 'marks' | 'find'>('none'); const [fq, setFq] = useState(''); const [keys, setKeys] = useState(false);
   const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
   const [editing, setEditing] = useState(false); const [card, setCard] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -92,7 +92,8 @@ export default function Reader() {
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); flip(e.shiftKey && e.key === ' ' ? -1 : 1); }
       else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); flip(-1); }
       else if (e.key === 'Escape') setPanel('none');
-      else if (e.key === '/' ) { e.preventDefault(); setPanel('find'); } };
+      else if (e.key === '/' ) { e.preventDefault(); setPanel('find'); }
+      else if (e.key === '?') setKeys(k => !k); };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); });
   const swipe = useRef<{ x: number; y: number; t: number } | null>(null);
 
@@ -174,6 +175,9 @@ export default function Reader() {
       <div className={`book-spread ${two ? 'two' : 'one'}`}>
         {paged && <button className="tap prev" aria-label="Previous page" onClick={() => flip(-1)} />}
         {ax.ruler && <Ruler />}
+        {keys && <div className="keys-help glass" role="dialog" aria-label="Keyboard shortcuts"><h2 className="h3">Keyboard shortcuts</h2>
+          <dl>{[['→ / Space / Page Down', 'Next page'], ['← / Shift+Space / Page Up', 'Previous page'], ['/', 'Find in this book'], ['Esc', 'Close panel'], ['?', 'Show or hide this help']].map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}</dl>
+          <button className="btn ghost sm" onClick={() => setKeys(false)}>Close</button></div>}
         <article id="reader-text" className={`page-paper ${turn && motion !== 'none' ? `turn-${motion}-${turn}` : ''}`} lang={book?.languages[0]}>
           {!chapters && <p className="loading"><span className="spin" /> Opening the book…</p>}
           {chapter && <div className="pg-view" ref={viewRef}

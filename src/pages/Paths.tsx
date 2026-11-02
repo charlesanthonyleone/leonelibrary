@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getCatalog, type CatEntry } from '../lib/books';
+import { getCatalog, keepOffline, type CatEntry } from '../lib/books';
 import { load } from '../lib/store';
 
 // Reading paths are built from the catalogue itself: each shelf or author, ordered shortest to longest so the path gets steadily more ambitious.
@@ -15,8 +15,8 @@ function buildPaths(cat: CatEntry[]): Path[] {
 const done = (id: number) => (load<{ book?: number }>(`progress:${id}`, {}).book ?? 0);
 
 export default function Paths() {
-  const [cat, setCat] = useState<CatEntry[]>([]); const [sp, setSp] = useSearchParams(); const sel = sp.get('p'); const [f, setF] = useState('');
-  useEffect(() => { getCatalog().then(setCat); }, []);
+  const [cat, setCat] = useState<CatEntry[]>([]); const [sp, setSp] = useSearchParams(); const sel = sp.get('p'); const [f, setF] = useState(''); const [saving, setSaving] = useState('');
+  useEffect(() => { getCatalog().then(setCat); }, []); useEffect(() => setSaving(''), [sel]);
   const paths = useMemo(() => buildPaths(cat), [cat]); const cur = paths.find(p => p.key === sel);
   if (cur) { const pct = cur.books.map(b => done(b.id)); const next = cur.books.find((_, i) => pct[i] < 0.98);
     return (
@@ -24,7 +24,8 @@ export default function Paths() {
         <div className="eyebrow"><Link to="/paths">Reading paths</Link> · {cur.kind}</div>
         <h1 className="display">{cur.title}</h1>
         <p className="lede">{cur.books.length} books, shortest first. {pct.filter(x => x >= 0.98).length} finished.</p>
-        {next && <p><Link className="btn gold" to={`/read?id=${next.id}`}>Continue with {next.title}</Link></p>}
+        <p className="row gap wrap">{next && <Link className="btn gold" to={`/read?id=${next.id}`}>Continue with {next.title}</Link>}
+          <button className="btn ghost" disabled={!!saving && saving !== 'done'} onClick={async () => { let n = 0; for (const b of cur.books) { setSaving(`${n}/${cur.books.length}`); await keepOffline(b.id).catch(() => {}); n++; } setSaving('done'); }}>{saving === 'done' ? '✓ Whole path saved offline' : saving ? `Saving ${saving}…` : '⤓ Keep the whole path offline'}</button></p>
         <ol className="path-list">{cur.books.map((b, i) => <li key={b.id} className={`glass ${pct[i] >= 0.98 ? 'done' : ''}`}>
           <span className="path-n" aria-hidden>{pct[i] >= 0.98 ? '✓' : i + 1}</span>
           <div><Link to={`/book?id=${b.id}`}><b>{b.title}</b></Link><div className="small muted">{b.author} · {b.words.toLocaleString()} words · about {Math.max(1, Math.round(b.words / 15000))} h{pct[i] > 0 && pct[i] < 0.98 ? ` · ${Math.round(pct[i] * 100)}% read` : ''}</div></div>
