@@ -20,3 +20,14 @@ The box shell environment has a STRIPE_SECRET_KEY that starts with `sk_live`. Ag
 
 ## 10. GitHub Pages size
 The deploy is about 768 MB in about 12,300 files. The GitHub Pages limit is 1 GB. Options: keep it under the limit (prune or recompress), or move books/fts to free object storage later.
+
+**#10 resolved (Nov 2 2026):** book texts, covers and the search index now live on Contabo in /opt/leonelibrary/assets. They're served by the `leonelibrary` compose project: a Caddy file server capped at 256 MB and 0.5 CPU, read-only, on 127.0.0.1:8792, plus a cloudflared quick tunnel capped at 128 MB and 0.3 CPU. Pages now carries only the app shell (17 MB, 112 files, down from 768 MB). The app reads the asset host from `data/assets.json`, and falls back to same-origin URLs if it can't reach it.
+
+## 11. Stable hostname for the asset tunnel: needs Charles
+The tunnel is a free Cloudflare *quick* tunnel (`*.trycloudflare.com`, no account). Its address changes whenever the container restarts, and until it's re-pointed, books and covers won't load. The fix is one command, `scripts/set-asset-host.sh`. For a permanent `books.leoneuniversity.org` there are two free options:
+- (a) Add leoneuniversity.org to a free Cloudflare account. That means changing the nameservers away from IONOS; first copy over all existing records, including the `library` CNAME. Then run `cloudflared tunnel login` on the server, create a named tunnel and route books.leoneuniversity.org to it.
+- (b) Keep IONOS DNS and add just a subdomain zone `books.leoneuniversity.org` to Cloudflare. Cloudflare's free plan doesn't support that, so (a) is the free route.
+After that: `scripts/set-asset-host.sh https://books.leoneuniversity.org/`.
+
+## 12. Accounts: end-to-end encrypted sync (confirmed by Charles)
+Shelves, highlights, notes and progress are encrypted in the browser before sync: AES-GCM, with a key derived from a recovery phrase. The server stores only ciphertext. Payment and credit records stay server-side. Anonymous local use keeps working and is merged in at sign-up. This still needs a host for the API (#6); the client crypto is being built behind the accounts flag.
