@@ -5,6 +5,7 @@ import { uid, useDesign, useStored, type Edit, type Highlight, type Progress } f
 import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
 import { logReading, shareNotesLink } from './Features';
+import QuoteCard from '../components/QuoteCard';
 
 type Bookmark = { id: string; chapter: number; para: number; label: string; at: number };
 type A11y = { dyslexia: boolean; contrast: boolean; spacing: number; words: number; sr: boolean; spread: 'auto' | 'one' | 'two'; motion: 'flip' | 'slide' | 'none' };
@@ -26,13 +27,13 @@ export default function Reader() {
   const [err, setErr] = useState('');
   const [d] = useDesign();
   const [a, setA] = useStored<A11y>('a11y', A11Y0); const ax = { ...A11Y0, ...a };
-  const [prog, setProg] = useStored<Progress & { para?: number }>(`progress:${id}`, { chapter: 0, pct: 0, at: 0 });
+  const [prog, setProg] = useStored<Progress & { para?: number; book?: number }>(`progress:${id}`, { chapter: 0, pct: 0, at: 0 });
   const [hl, setHl] = useStored<Highlight[]>(`highlights:${id}`, []);
   const [edits, setEdits] = useStored<Edit[]>(`edits:${id}`, []);
   const [marks, setMarks] = useStored<Bookmark[]>(`bookmarks:${id}`, []);
   const [panel, setPanel] = useState<'none' | 'toc' | 'aa' | 'design' | 'notes' | 'voice' | 'marks'>('none');
   const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(false); const [card, setCard] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]); const [voice, setVoice] = useStored('voice', ''); const [rate, setRate] = useStored('voice-rate', 1); const [para, setPara] = useState(-1);
   const [page, setPage] = useState(0); const [pages, setPages] = useState(1); const [turn, setTurn] = useState<'' | 'fwd' | 'back'>('');
@@ -76,7 +77,7 @@ export default function Reader() {
 
   const firstVisible = () => { const v = viewRef.current, f = flowRef.current; if (!v || !f) return 0; const stride = v.clientWidth + gap(two);
     const ps = Array.from(f.querySelectorAll<HTMLElement>('[data-p]')); const hit = ps.find(p => p.offsetLeft >= page * stride - 2); return hit ? Number(hit.dataset.p) : 0; };
-  useEffect(() => { if (!chapters) return; const t = setTimeout(() => { const p = paged ? firstVisible() : 0; setProg(o => ({ ...o, chapter: ch, para: p, pct: pages > 1 ? page / (pages - 1) : 0, at: Date.now() })); }, 250); return () => clearTimeout(t); }, [page, pages, ch, chapters]);
+  useEffect(() => { if (!chapters) return; const t = setTimeout(() => { const p = paged ? firstVisible() : 0; setProg(o => ({ ...o, chapter: ch, para: p, pct: pages > 1 ? page / (pages - 1) : 0, book: (ch + (pages > 1 ? page / (pages - 1) : 1)) / chapters.length, at: Date.now() })); }, 250); return () => clearTimeout(t); }, [page, pages, ch, chapters]);
 
   const goCh = (n: number, at: number | 'end' = 0) => { pendingPara.current = at; setPage(0); const p = new URLSearchParams(sp); p.set('ch', String(n)); setSp(p, { replace: true }); setPanel('none'); };
   const flip = (dir: 1 | -1) => {
@@ -136,6 +137,7 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'aa' ? 'none' : 'aa')} className={panel === 'aa' ? 'on' : ''} aria-label="Text and accessibility settings">Aa</button>
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
+          {id > 0 && <Link to={`/dna?id=${id}`} className="rb-link" title="Statistics and story map measured from this text">DNA</Link>}
           <button onClick={() => speak()} className={speaking ? 'on' : ''} title="Narrate this chapter with your device's voices">{speaking ? '■ Stop' : '▶ Listen'}</button>
           <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
           <button onClick={() => { setEditing(!editing); if (editing && panel === 'design') setPanel('none'); }} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
@@ -188,10 +190,12 @@ export default function Reader() {
         {paged && <button className="tap next" aria-label="Next page" onClick={() => flip(1)} />}
       </div>
       {chapter && <div className="pg-foot" aria-live="polite"><span className="muted small">{chapter.title.slice(0, 48)}</span><span className="muted small">{pageNo}{pageNo && ' · '}Chapter {ch + 1} of {chapters!.length}</span></div>}
+      {card && <QuoteCard text={card} by={book ? author(book) : ''} title={book?.title.split(/[;:]/)[0] ?? ''} onClose={() => setCard(null)} />}
       {sel && <div className="sel-pop glass" style={{ left: sel.x, top: sel.y - 52, position: 'fixed' }} onMouseUp={e => e.stopPropagation()}>
         <button onClick={() => addHl()}>Highlight</button>
         <button onClick={() => { const n = prompt('Note for this passage'); if (n) addHl(n); }}>Add note</button>
         <button onClick={() => { navigator.clipboard?.writeText(`“${sel.text}” — ${book ? author(book) : ''}, ${book?.title.split(/[;:]/)[0] ?? ''}`); setSel(null); }}>Copy quote</button>
+        <button onClick={() => { setCard(sel.text); setSel(null); }}>Quote card</button>
       </div>}
     </div>
   );

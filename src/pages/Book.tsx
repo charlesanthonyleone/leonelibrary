@@ -51,7 +51,7 @@ export default function BookPage() {
           <div className="row gap wrap">
             <Link className="btn gold" to={`/read?id=${b.id}`}>Read now</Link>
             <button className="btn ghost" onClick={() => setShelf(on ? shelf.filter(s => s.id !== b.id) : [...shelf, { id: b.id, title: b.title, author: author(b), cover: cover(b), lang: b.languages[0], addedAt: Date.now() }])}>{on ? '✓ On your shelf' : '+ Add to shelf'}</button>
-            <button className="btn ghost" onClick={toggleOff} disabled={off === 'busy'}>{off === 'yes' ? '✓ Saved offline' : off === 'busy' ? 'Saving…' : '⤓ Keep offline'}</button>
+            <Link className="btn ghost" to={`/dna?id=${b.id}`}>Book DNA</Link> <button className="btn ghost" onClick={toggleOff} disabled={off === 'busy'}>{off === 'yes' ? '✓ Saved offline' : off === 'busy' ? 'Saving…' : '⤓ Keep offline'}</button>
             <Link className="btn ghost" to={`/studio/translate?id=${b.id}`}>Translate</Link>
             <Link className="btn ghost" to={`/studio/remix?id=${b.id}`}>Remix</Link>
             <Link className="btn ghost" to={`/studio/continue?id=${b.id}`}>Continue</Link>

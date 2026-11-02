@@ -6,20 +6,28 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import MountainSky from './components/MountainSky';
 import { Footer, Nav, useUiMotion } from './components/ui';
+import { lazy, Suspense } from 'react';
 import Home from './pages/Home';
-import Add from './pages/Add';
-import Library from './pages/Library';
-import BookPage from './pages/Book';
-import Reader from './pages/Reader';
-import Design from './pages/Design';
-import Shelf from './pages/Shelf';
-import { Continue, Remix, StudioHub, Translate } from './pages/Studio';
-import { Calculator, PublishingHome, Royalties, Submit } from './pages/Publishing';
-import { Classroom, Community, NotFound, Rights, Storefront } from './pages/Misc';
+const Add = lazy(() => import('./pages/Add'));
+const Library = lazy(() => import('./pages/Library'));
+const BookPage = lazy(() => import('./pages/Book'));
+const Reader = lazy(() => import('./pages/Reader'));
+const Design = lazy(() => import('./pages/Design'));
+const Shelf = lazy(() => import('./pages/Shelf'));
+const Plans = lazy(() => import('./pages/Plans'));
+const Search = lazy(() => import('./pages/Search'));
+const Paths = lazy(() => import('./pages/Paths'));
+const Dna = lazy(() => import('./pages/Dna'));
+const Account = lazy(() => import('./pages/Account'));
+const named = <M extends Record<string, unknown>>(f: () => Promise<M>, k: keyof M) => lazy(() => f().then(m => ({ default: m[k] as React.ComponentType })));
+const studio = () => import('./pages/Studio'), pub = () => import('./pages/Publishing'), misc = () => import('./pages/Misc'), feat = () => import('./pages/Features'), my = () => import('./pages/MyBooks');
+const [Continue, Remix, StudioHub, Translate] = (['Continue', 'Remix', 'StudioHub', 'Translate'] as const).map(k => named(studio, k));
+const [Calculator, PublishingHome, Royalties, Submit] = (['Calculator', 'PublishingHome', 'Royalties', 'Submit'] as const).map(k => named(pub, k));
+const [Classroom, Community, NotFound, Rights, Storefront] = (['Classroom', 'Community', 'NotFound', 'Rights', 'Storefront'] as const).map(k => named(misc, k));
+const [PublicShelves, Marketplace, Clubs, SharedNotes, Goals, Glossary, CollabStudio, ExportPage] = (['PublicShelves', 'Marketplace', 'Clubs', 'SharedNotes', 'Goals', 'Glossary', 'CollabStudio', 'ExportPage'] as const).map(k => named(feat, k));
+const [Offline, Imports] = (['Offline', 'Imports'] as const).map(k => named(my, k));
 import './styles.css';
 import './room.css';
-import Plans from './pages/Plans';
-import { PublicShelves, Marketplace, Clubs, SharedNotes, Goals, Glossary, CollabStudio, ExportPage } from './pages/Features';
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -42,7 +50,7 @@ function App() {
       <a href="#main" className="skip">Skip to content</a>
       <Nav />
       <main id="main" className={reading ? 'reading' : ''}>
-        <ErrorBoundary key={pathname} label="page"><Routes>
+        <ErrorBoundary key={pathname} label="page"><Suspense fallback={<div className="page" role="status"><p className="muted">Loading…</p></div>}><Routes>
           <Route path="/" element={<Home />} />
           <Route path="/library" element={<Library />} />
           <Route path="/book" element={<BookPage />} />
@@ -72,8 +80,14 @@ function App() {
           <Route path="/storefront" element={<Storefront />} />
           <Route path="/rights" element={<Rights />} />
           <Route path="/add" element={<Add />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/paths" element={<Paths />} />
+          <Route path="/dna" element={<Dna />} />
+          <Route path="/offline" element={<Offline />} />
+          <Route path="/import" element={<Imports />} />
+          <Route path="/account" element={<Account />} />
           <Route path="*" element={<NotFound />} />
-        </Routes></ErrorBoundary>
+        </Routes></Suspense></ErrorBoundary>
       </main>
       {!reading && <Footer />}
     </>

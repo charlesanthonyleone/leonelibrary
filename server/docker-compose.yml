@@ -1,0 +1,18 @@
+# Leone API. Resource-capped, own network, own volume, bound to localhost only. Pick a free port first (check `docker ps` and `ss -ltnp`).
+services:
+  leone-api:
+    image: node:24-alpine
+    container_name: leone-api
+    working_dir: /app
+    command: node index.mjs
+    volumes: ["./index.mjs:/app/index.mjs:ro", "leone-api-data:/data"]
+    environment: { DB_PATH: /data/leone.db, HOST: 0.0.0.0, PORT: "8787" }
+    env_file: [.env]   # secrets live only in server/.env on the host (gitignored)
+    ports: ["127.0.0.1:${LEONE_API_PORT:-18787}:8787"]
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 128
+    restart: unless-stopped
+    networks: [leone-api]
+networks: { leone-api: {} }
+volumes: { leone-api-data: {} }

@@ -26,6 +26,7 @@ export const LANGS: Record<string, string> = { en: 'English', fr: 'French', de: 
 export const langName = (c: string) => LANGS[c] ?? c.toUpperCase();
 
 export async function getBook(id: number): Promise<Book> {
+  if (id < 0) { const h = await getHosted(id); return { id, title: h.title, authors: [{ name: h.author, birth_year: null, death_year: null }], languages: [h.lang], formats: {}, words: h.words, chapterCount: h.chapters.length, copyright: null }; }
   const hit = (await getCatalog()).find(b => b.id === id);
   if (!hit) throw new Error('This book is not in the Library.');
   return toBook(hit);
@@ -38,6 +39,7 @@ export const author = (b: Book) => b.authors[0]?.name.replace(/^([^,]+),\s*(.+?)
 export type Rights = { tag: string; tone: 'ok' | 'check' | 'no'; detail: string };
 export const PD_DEATH_CUTOFF = new Date().getFullYear() - 71; // life+70: author died 1955 or earlier (2026)
 export function rightsFor(b: Book): Rights {
+  if (b.id < 0) return { tag: 'Private import', tone: 'check', detail: 'Your own DRM-free file. It stays in this browser and is never uploaded or shared.' };
   const ds = b.authors.map(a => a.death_year).filter((y): y is number => y != null);
   const last = ds.length ? Math.max(...ds) : null;
   return { tag: 'Public domain worldwide', tone: 'ok', detail: `${last ? `Author died ${last}, more than 70 years ago (life+70 rule), ` : ''}and first published before 1931 (US rule). Listed only because both checks pass.` };
@@ -84,6 +86,7 @@ const bookCache = new Map<number, Promise<HostedBook>>();
 export function getHosted(id: number): Promise<HostedBook> {
   if (!bookCache.has(id)) {
     bookCache.set(id, (async () => {
+      if (id < 0) { const b = await (await import('./private')).privateGet(id); if (!b) throw new Error('not-hosted'); return b; }
       if (!(await isBundled(id))) throw new Error('not-hosted');
       const r = await fetch(`${BASE}books/${id}.json.gz`);
       if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
@@ -94,6 +97,11 @@ export function getHosted(id: number): Promise<HostedBook> {
     bookCache.get(id)!.catch(() => bookCache.delete(id));
   }
   return bookCache.get(id)!;
+}
+/** Raw JSON text of a hosted book (for fast pre-filtering in search). */
+export async function getHostedRaw(id: number): Promise<string> {
+  const r = await fetch(`${BASE}books/${id}.json.gz`); if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+  const enc = r.headers.get('content-encoding'); return enc && enc.includes('gzip') ? r.text() : new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
 }
 export async function getChapters(id: number): Promise<Chapter[]> {
   return (await getHosted(id)).chapters.map(c => ({ title: c.t, paras: c.p }));

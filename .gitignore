@@ -4,3 +4,5 @@ shots
 *.tsbuildinfo
 public/books/
 public/covers/
+server/.env
+server/*.db*

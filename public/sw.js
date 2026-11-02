@@ -1,8 +1,8 @@
 // Leone Library offline worker. App shell cached on install; assets cached as used.
 // Books saved with "Keep offline" live in the separate 'leone-books' cache and survive updates.
-const V = 'leone-v2', BOOKS = 'leone-books';
+const V = 'leone-v3', BOOKS = 'leone-books';
 const BASE = self.registration.scope;
-self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll([BASE, BASE + 'manifest.webmanifest', BASE + 'icon-192.png'])).then(() => self.skipWaiting())); });
+self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(async c => { await c.addAll([BASE, BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'data/catalog.json']); const list = await fetch(BASE + 'precache.json').then(r => r.json()).catch(() => []); await c.addAll(list.map(f => BASE + f)).catch(() => {}); }).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== BOOKS).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET') return;
