@@ -44,7 +44,10 @@ export async function getBook(id: number): Promise<Book> {
 }
 
 export const cover = (b: Book) => b.formats['image/jpeg'];
-export const author = (b: Book) => b.authors[0]?.name.replace(/^([^,]+),\s*(.+?)(\s*\(.*\))?$/, '$2 $1') ?? 'Anonymous';
+/** "Tolstoy, Leo, graf" → "Leo Tolstoy"; "Doyle, Arthur Conan" → "Arthur Conan Doyle". Lower-case titles (graf, freiherr) and parenthesised full names are dropped; Jr./Sr. kept. */
+export const personName = (n: string) => { const p = n.replace(/\s*\(.*\)\s*$/, '').split(/,\s*/).filter(Boolean); if (p.length < 2) return p[0] ?? n;
+  const suf = p.slice(2).filter(x => /^(Jr\.?|Sr\.?|[IVX]+)$/.test(x)); return [p[1], p[0], ...suf].join(' '); };
+export const author = (b: Book) => (b.authors[0] ? personName(b.authors[0].name) : 'Anonymous');
 
 /** Rights/provenance tag. US PD rule for 2026: first published 1930 or earlier. */
 export type Rights = { tag: string; tone: 'ok' | 'check' | 'no'; detail: string };
