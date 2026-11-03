@@ -15,3 +15,10 @@ QA worker: please check desktop two-column spread with the player, and screen re
 - Migrated progress re-read when chapters load (per HANDOFF-LR3).
 - Home "Continue reading" (last 4 books from local progress). `personName()` in books.ts: natural author names site-wide.
 - Known: book page "N chapters" comes from catalogue `chapters` and may differ from the v2 split until the catalogue is regenerated (LR3).
+
+## Round 3c (74866946, deployed from fresh origin/main incl. 848782c2)
+- tts.ts: Kokoro text goes through speakable() (empty result → short silence); highlight ranges unchanged. Piper (non-English) untouched.
+- Book.tsx first-page title uses chapterTitle(). Reader titles already come via getChapters.
+- Reader: new highlights store `para` and jump to it; bookmarks sorted by position, labelled "Group · Chapter", empty state.
+- KJV 7999 "0$:001:001" Opening NOT fixed by me (per lead: new pipeline worker owns it). Cause: REF in scripture.py needs digits, so the first verse of each book (prefix "0$") falls into front → "Opening".
+- Live /account shows the device-only state (no email input rendered), so 848782c2's email/live-region elements can't be checked live.
