@@ -178,7 +178,7 @@ export default function Reader() {
       <p className="lede">Leone Library only opens books it hosts in full. This one isn't in the collection yet — you can ask for it on the Add-a-book page, and it's imported once enough readers vote.</p>
       <div className="row gap wrap"><Link className="btn gold" to="/library">Back to the Library</Link><Link className="btn ghost" to="/add">Request a book</Link></div></div>);
 
-  const pageNo = paged ? `${page + 1} / ${pages}` : '';
+  const left = pages - 1 - page; const pageNo = paged ? `Page ${page + 1} of ${pages}${left > 0 ? ` · ${left} ${left === 1 ? 'page' : 'pages'} left in chapter` : ' · last page of chapter'}` : '';
   const pct = chapters ? ((ch + (pages > 1 ? page / (pages - 1) : 0)) / chapters.length) * 100 : 0;
   const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : ax.motion;
   return (
