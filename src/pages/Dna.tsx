@@ -12,7 +12,7 @@ export default function DnaPage() {
   useEffect(() => { setV(null); if (vs) getHosted(vs).then(h => setV({ b: h, d: bookDna(h) })).catch(() => setV(null)); }, [vs]);
   if (b && DNA_UNSUPPORTED.has(b.lang)) return <div className="page"><div className="eyebrow">Book DNA</div><h1 className="display">{b.title}</h1><p className="lede">Book DNA counts words and sentences, and this book's language is not written with spaces between words, so the figures would be wrong. It is not shown rather than guessed.</p><Link className="btn gold" to={`/read?id=${id}`}>Read the book</Link></div>;
   if (err) return <div className="page"><h1 className="display">Book not found</h1><Link to="/library">Back to the Library</Link></div>;
-  if (!b || !d) return <div className="page"><p className="muted" role="status">Reading the whole book to measure it…</p></div>;
+  if (!b || !d) return <div className="page"><div className="eyebrow">Book DNA</div><h1 className="display">{b?.title ?? 'Book DNA'}</h1><p className="muted" role="status"><span className="spin" /> Reading the whole book to measure it…</p></div>;
   const maxW = Math.max(...d.chapterWords), C = b.chapters.length;
   return (
     <div className="page dna">

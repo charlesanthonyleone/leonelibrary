@@ -21,7 +21,7 @@ export default function BookCard({ b }: { b: Book }) {
         <Link to={`/book?id=${b.id}`} className="bc-title">{b.title.split(/[;:]/)[0]}</Link>
         <div className="bc-author">{author(b)}</div>
         <div className="bc-meta"><RightsTag r={rightsFor(b)} /><span className="chip">{b.languages.map(langName).join(', ')}</span></div>
-        <button className={`shelf-btn ${on ? 'on' : ''}`} onClick={toggle} aria-pressed={on} aria-label={`${on ? 'Remove' : 'Add'} ${b.title.split(/[;:]/)[0]} ${on ? 'from' : 'to'} your shelf`}>{on ? '✓ On your shelf' : '+ Add to shelf'}</button>
+        <button className={`shelf-btn ${on ? 'on' : ''}`} onClick={toggle} aria-pressed={on} aria-label={`${on ? 'On your shelf' : 'Add to shelf'}: ${b.title.split(/[;:]/)[0]}`}>{on ? '✓ On your shelf' : '+ Add to shelf'}</button>
       </div>
     </article>
   );
