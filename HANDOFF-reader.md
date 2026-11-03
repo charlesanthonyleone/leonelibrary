@@ -27,3 +27,9 @@ QA worker: please check desktop two-column spread with the player, and screen re
 - Pagination verified live (390 + 1440): CSS-column pages, two-page spread on desktop, tap halves / arrows, footer "Page N of M · K pages left in chapter". Phone: tap zones no longer leave a sticky gold frame after a touch; paper height uses 100dvh so the footer stays on screen; footer stacks at ≤520px.
 - axe rescan of the remaining routes (/library … /nope, 25 routes) on live: 0 violations.
 - /account sign-in form: gated by FLAGS.accounts (VITE_ACCOUNTS=1, not set in the Pages build), so the device-only state shows. Separately, Leone ID's issuer https://id.xatmarket.com doesn't answer over HTTPS (http gives 500 via Pingora), so the Leone ID card stays hidden. Left as-is: needs HTTPS on id.xatmarket.com plus an accounts backend (decision for Charles).
+
+## Round 3e (90c64606, live)
+- Progress scrubber under the page (whole book; drag shows chapter + %, release jumps to chapter/paragraph; keyboard works; aria-valuetext).
+- "Save offline" / "✓ Offline" toggle in the reader bar (keepOffline/dropOffline); verified: saved, network off, reload of another chapter opens.
+- Player: ⏪/⏩ paragraph skip beside ⏮/⏭ sentence skip, ☾ sleep-timer button cycling Off/15/30/60 min/end of chapter (same state as the Voice panel select). Verified with Kokoro on local.
+- Already present and checked: Find in book (67 hits "Netherfield" across chapters), Aa themes Light/Sepia/Dark + size, Design panel font/leading/measure, slide page turn.
