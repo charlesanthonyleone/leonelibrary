@@ -1,6 +1,7 @@
 import { tocGroups } from '../lib/chapters';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { isOffline, keepOffline, dropOffline } from '../lib/books';
 import { author, getBook, getChapters, rightsFor, type Book, type Chapter } from '../lib/books';
 import { track } from '../lib/leoneid';
 import { THEMES, load, uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
@@ -156,6 +157,14 @@ export default function Reader() {
   const togglePause = () => { if (nar.current && kVoice) { if (paused) nar.current.resume(); else nar.current.pause(); }
     else if (window.speechSynthesis) { if (paused) speechSynthesis.resume(); else speechSynthesis.pause(); } setPaused(!paused); };
   const skip = (dir: 1 | -1) => { if (nar.current && kVoice) { nar.current.skip(dir); setPaused(false); } else start(Math.max(0, Math.min(paras.length - 1, para + dir))); };
+  const [off, setOff] = useState(false); const [scrubV, setScrubV] = useState<number | null>(null);
+  useEffect(() => { if (id > 0) isOffline(id).then(setOff).catch(() => {}); }, [id]);
+  const toggleOff = () => { (off ? dropOffline(id) : keepOffline(id)).then(() => isOffline(id)).then(setOff).catch(() => {}); };
+  const SLEEPS = [0, 15, 30, 60, -1];
+  const cycleSleep = () => { const i = SLEEPS.indexOf(sleep); setSleep(SLEEPS[(i + 1) % SLEEPS.length]); sleepAt.current = 0; };
+  const sleepLabel = sleep === -1 ? 'End of chapter' : sleep ? `${sleep} min` : 'Off';
+  const paraSkip = (dir: 1 | -1) => { const from = Math.max(0, Math.min(paras.length - 1, (para < 0 ? 0 : para) + dir)); start(from); };
+  const scrub = (v: number) => { if (!chapters) return; const t = (v / 100) * chapters.length; const c = Math.min(chapters.length - 1, Math.floor(t)); const n = chapters[c]?.paras?.length ?? 0; setScrubV(null); goCh(c, Math.floor((t - c) * n)); };
   const stopAll = () => { window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(false); setPaused(false); setPara(-1); setSay(null); };
   useEffect(() => { if (cont.current && chapter) { cont.current = false; start(0); } }, [chapter]);
   useEffect(() => { if (!sleep || sleep < 0 || !speaking) return; sleepAt.current = Date.now() + sleep * 60000;
@@ -192,6 +201,7 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'aa' ? 'none' : 'aa')} className={panel === 'aa' ? 'on' : ''} aria-label="Text and accessibility settings">Aa</button>
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
+          {id > 0 && 'caches' in window && <button className="rb-link" aria-pressed={off} onClick={toggleOff} title={off ? 'This book is saved on this device and opens without a connection' : 'Save this book on this device to read without a connection'}>{off ? '✓ Offline' : 'Save offline'}</button>}
           {id > 0 && <Link to={`/dna?id=${id}`} className="rb-link" title="Statistics and story map measured from this text">DNA</Link>}
           <button onClick={() => speak()} className={`rb-listen ${speaking ? "on" : ""}`} title="Narrate this chapter aloud" aria-label={speaking ? (tts.phase === 'loading' && kVoice ? `Voice ${tts.pct}% loading. Stop narration` : 'Stop narration') : 'Listen: narrate this chapter aloud'}>{speaking ? (tts.phase === 'loading' && kVoice ? `■ Voice ${tts.pct}%` : '■ Stop') : '▶ Listen'}</button>
           <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
@@ -267,12 +277,15 @@ export default function Reader() {
       </div>
       {speaking && <div className="player glass" role="region" aria-label="Narration player">
         <div className="pl-info"><span className="pl-ch">{chapter?.title.slice(0, 40)}</span><span className="muted small">{tts.phase === 'loading' && kVoice ? `Loading natural voice ${tts.pct}%` : paused ? `Paused · ${Math.round(pct)}%` : `Reading · ${rate}× · ${Math.round(pct)}%`}</span></div>
-        <div className="pl-ctl"><button onClick={() => skip(-1)} aria-label="Previous sentence">⏮</button>
+        <div className="pl-ctl"><button onClick={() => paraSkip(-1)} aria-label="Previous paragraph">⏪</button><button onClick={() => skip(-1)} aria-label="Previous sentence">⏮</button>
           <button className="pl-main" onClick={togglePause} aria-label={paused ? 'Resume narration' : 'Pause narration'}>{paused ? '▶' : '❚❚'}</button>
-          <button onClick={() => skip(1)} aria-label="Next sentence">⏭</button>
+          <button onClick={() => skip(1)} aria-label="Next sentence">⏭</button><button onClick={() => paraSkip(1)} aria-label="Next paragraph">⏩</button>
+          <button className="pl-sleep" onClick={cycleSleep} aria-label={`Sleep timer: ${sleepLabel}. Change`}>☾{sleep ? ` ${sleep === -1 ? 'ch' : sleep + 'm'}` : ''}</button>
           <button onClick={() => setRate(rate >= 2 ? 0.75 : Math.round((rate + 0.25) * 100) / 100)} aria-label={`Speed ${rate} times, change`}>{rate}×</button>
           <button onClick={stopAll} aria-label="Stop narration">✕</button></div></div>}
-      {chapter && <div className="pg-foot" aria-live="polite"><span className="muted small">{chapter.title.slice(0, 48)}</span><span className="muted small">{pageNo}{pageNo && ' · '}Chapter {ch + 1} of {chapters!.length} · {Math.round(pct)}%</span></div>}
+      {chapter && <div className="pg-foot"><span className="muted small">{chapter.title.slice(0, 48)}</span><span className="muted small" aria-live="polite">{pageNo}{pageNo && ' · '}Chapter {ch + 1} of {chapters!.length} · {Math.round(pct)}%</span>
+        <input className="scrub" type="range" min={0} max={100} step={0.1} value={scrubV ?? pct} aria-label="Position in book" aria-valuetext={`${Math.round(pct)}%, chapter ${ch + 1} of ${chapters!.length}`} onChange={e => setScrubV(+e.target.value)} onPointerUp={e => scrub(+(e.target as HTMLInputElement).value)} onKeyUp={e => scrub(+(e.target as HTMLInputElement).value)} />
+        {scrubV !== null && <span className="scrub-tip small">{chapters![Math.min(chapters!.length - 1, Math.floor(scrubV / 100 * chapters!.length))]?.title.slice(0, 40)} · {Math.round(scrubV)}%</span>}</div>}
       {def && <Define word={def} onClose={() => setDef(null)} />}
       {card && <QuoteCard text={card} by={book ? author(book) : ''} title={book?.title.split(/[;:]/)[0] ?? ''} onClose={() => setCard(null)} />}
       {sel && <div className="sel-pop glass" style={{ left: sel.x, top: sel.y - 52, position: 'fixed' }} onMouseUp={e => e.stopPropagation()}>
