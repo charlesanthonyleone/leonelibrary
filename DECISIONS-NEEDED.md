@@ -31,3 +31,8 @@ After that: `scripts/set-asset-host.sh https://books.leoneuniversity.org/`.
 
 ## 12. Accounts: end-to-end encrypted sync (confirmed by Charles)
 Shelves, highlights, notes and progress are encrypted in the browser before sync: AES-GCM, with a key derived from a recovery phrase. The server stores only ciphertext. Payment and credit records stay server-side. Anonymous local use keeps working and is merged in at sign-up. This still needs a host for the API (#6); the client crypto is being built behind the accounts flag.
+
+> Update (Nov 2, 2026): until #11 is done, a capped watchdog container on Contabo (`deploy/watchdog`, 96 MB / 0.2 CPU, read-only, no capabilities)
+> reads the quick tunnel's address from cloudflared's internal metrics and repoints `data/assets.json` on gh-pages. It authenticates with a
+> deploy key scoped to this repo only (GitHub deploy key id 168532828), stored at /opt/leonelibrary/secrets on the VPS, never in the repo.
+> It restarts with Docker (`restart: unless-stopped`), so it survives reboots. Revoke anytime in repo Settings → Deploy keys.
