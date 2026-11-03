@@ -27,12 +27,13 @@ const [Calculator, PublishingHome, Royalties, Submit] = (['Calculator', 'Publish
 const [Classroom, Community, NotFound, Rights, Storefront] = (['Classroom', 'Community', 'NotFound', 'Rights', 'Storefront'] as const).map(k => named(misc, k));
 const [PublicShelves, Marketplace, Clubs, SharedNotes, Goals, Glossary, CollabStudio, ExportPage] = (['PublicShelves', 'Marketplace', 'Clubs', 'SharedNotes', 'Goals', 'Glossary', 'CollabStudio', 'ExportPage'] as const).map(k => named(feat, k));
 const [Offline, Imports] = (['Offline', 'Imports'] as const).map(k => named(my, k));
+import { routeSeo } from './lib/seo';
 import './styles.css';
 import './room.css';
 
 function ScrollTop() {
   const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => { window.scrollTo(0, 0); routeSeo(pathname); }, [pathname]);
   return null;
 }
 function MotionClass() {
