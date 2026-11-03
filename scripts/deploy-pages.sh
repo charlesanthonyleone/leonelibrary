@@ -11,7 +11,7 @@ npm run build
 if [ "${KEEP_ASSETS:-0}" != 1 ]; then rm -rf dist/books dist/covers dist/fts; fi
 node scripts/sitemap.mjs
 cp dist/index.html dist/404.html
-for r in library book read shelf plans shelves marketplace clubs notes goals export studio/glossary studio/collab design studio studio/translate studio/remix studio/continue studio/design publishing publishing/calculator publishing/submit publishing/royalties classroom community storefront rights add search paths dna offline import account; do
+for r in library book read shelf plans shelves marketplace clubs notes goals export studio/glossary studio/collab design studio studio/translate studio/remix studio/continue studio/design publishing publishing/calculator publishing/submit publishing/royalties classroom community storefront rights add search paths dna offline import account author authors subjects subject genre; do
   mkdir -p "dist/$r"; cp dist/index.html "dist/$r/index.html"; done
 touch dist/.nojekyll
 REMOTE=$(git remote get-url origin)

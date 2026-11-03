@@ -11,6 +11,8 @@ import { chapterTitle, migrateSaved } from './chapters';
 /** Catalogue entry: only books whose complete text is hosted on Leone Library are listed. */
 export type CatEntry = { id: number; title: string; author: string; authors: Person[]; lang: string[]; subjects: string[]; shelves: string[]; downloads: number; cover: boolean; words: number; chapters: number };
 let catalog: Promise<CatEntry[]> | null = null;
+/** Library of Congress class codes (PR, PS, V…) that Gutenberg lists among subjects; not real subjects. */
+export const isShelfCode = (s: string) => /^[A-Z]{1,3}$/.test(s.trim());
 export const topSubject = (s: string) => s.split(' -- ')[0].replace(/\s*\(.*?\)\s*$/, '').trim();
 /** Books sharing the most top-level subjects and shelves with `id`, from real catalogue metadata only. */
 export function similarBooks(cat: CatEntry[], id: number, n = 8): CatEntry[] {

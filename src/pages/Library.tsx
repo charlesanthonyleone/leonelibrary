@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getCatalog, langName, topSubject, toBook, type CatEntry } from '../lib/books';
+import { getCatalog, isShelfCode, langName, topSubject, toBook, type CatEntry } from '../lib/books';
 import BookCard from '../components/BookCard';
 
 const PER = 48;
@@ -20,7 +20,7 @@ export default function Library() {
   useEffect(() => setInput(q), [q]);
   const facets = useMemo(() => {
     const L = new Map<string, number>(), S = new Map<string, number>(), J = new Map<string, number>();
-    cat?.forEach(c => { c.lang.forEach(l => L.set(l, (L.get(l) ?? 0) + 1)); c.shelves.forEach(s => S.set(s, (S.get(s) ?? 0) + 1)); new Set(c.subjects.map(topSubject)).forEach(s => J.set(s, (J.get(s) ?? 0) + 1)); });
+    cat?.forEach(c => { c.lang.forEach(l => L.set(l, (L.get(l) ?? 0) + 1)); c.shelves.forEach(s => S.set(s, (S.get(s) ?? 0) + 1)); new Set(c.subjects.filter(x => !isShelfCode(x)).map(topSubject)).forEach(s => J.set(s, (J.get(s) ?? 0) + 1)); });
     return { langs: [...L].sort((a, b) => b[1] - a[1]), shelves: [...S].filter(s => s[1] >= 5).sort((a, b) => a[0].localeCompare(b[0])), subjects: [...J].filter(s => s[1] >= 8).sort((a, b) => a[0].localeCompare(b[0])) };
   }, [cat]);
   const hits = useMemo(() => {
