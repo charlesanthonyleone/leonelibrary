@@ -411,3 +411,5 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
 .cr-bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; margin: 4px 0 2px; } .cr-bar span { display: block; height: 100%; background: var(--gold-2, #d8b46a); }
 @media (max-width: 520px) { .book-cover-lg { max-width: 190px; margin: 0 auto; } }
 .toc-gh { margin: 14px 0 4px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-2, #d8b46a); } .toc-g:first-of-type .toc-gh { margin-top: 4px; }
+.rp-h { font-family: 'Cinzel', serif; letter-spacing: .14em; font-size: 13px; color: var(--gold); margin: 0 0 12px; text-transform: uppercase; font-weight: 400; }
+.toc-gh { font-family: 'Cinzel', serif; font-weight: 400; }

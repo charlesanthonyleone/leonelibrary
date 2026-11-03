@@ -193,7 +193,7 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
           {id > 0 && <Link to={`/dna?id=${id}`} className="rb-link" title="Statistics and story map measured from this text">DNA</Link>}
-          <button onClick={() => speak()} className={`rb-listen ${speaking ? "on" : ""}`} title="Narrate this chapter aloud" aria-label={speaking ? (tts.phase === 'loading' && kVoice ? `Stop narration (natural voice loading, ${tts.pct}%)` : 'Stop narration') : 'Listen: narrate this chapter aloud'}>{speaking ? (tts.phase === 'loading' && kVoice ? `■ Voice ${tts.pct}%` : '■ Stop') : '▶ Listen'}</button>
+          <button onClick={() => speak()} className={`rb-listen ${speaking ? "on" : ""}`} title="Narrate this chapter aloud" aria-label={speaking ? (tts.phase === 'loading' && kVoice ? `Voice ${tts.pct}% loading. Stop narration` : 'Stop narration') : 'Listen: narrate this chapter aloud'}>{speaking ? (tts.phase === 'loading' && kVoice ? `■ Voice ${tts.pct}%` : '■ Stop') : '▶ Listen'}</button>
           <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
           <button onClick={() => { setEditing(!editing); if (editing && panel === 'design') setPanel('none'); }} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
           {editing && <button onClick={() => setPanel(panel === 'design' ? 'none' : 'design')} className={panel === 'design' ? 'on' : ''}>Design</button>}
@@ -201,9 +201,9 @@ export default function Reader() {
         <div className="rb-progress" role="progressbar" aria-label="Progress through the book" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
       </div>
       {panel !== 'none' && <aside className="reader-panel glass" aria-label="Reader panel">
-        {panel === 'toc' && <><h4>Contents</h4>{tocGroups((chapters ?? []).map(c => ({ title: c.title, g: c.group }))).map((g, gi) => <div key={gi} className="toc-g">{g.group && <h5 className="toc-gh">{g.group}</h5>}<ol className="toc">{g.items.map(({ index: i, title }) => <li key={i}><button className={i === ch ? 'on' : ''} aria-current={i === ch ? 'true' : undefined} onClick={() => goCh(i)}>{title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></div>)}</>}
+        {panel === 'toc' && <><h2 className="rp-h">Contents</h2>{tocGroups((chapters ?? []).map(c => ({ title: c.title, g: c.group }))).map((g, gi) => <div key={gi} className="toc-g">{g.group && <h3 className="toc-gh">{g.group}</h3>}<ol className="toc">{g.items.map(({ index: i, title }) => <li key={i}><button className={i === ch ? 'on' : ''} aria-current={i === ch ? 'true' : undefined} onClick={() => goCh(i)}>{title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></div>)}</>}
         {panel === 'find' && <FindPanel chapters={chapters ?? []} q={fq} setQ={setFq} go={goCh} />}
-        {panel === 'aa' && <><h4>Text &amp; accessibility</h4>
+        {panel === 'aa' && <><h2 className="rp-h">Text &amp; accessibility</h2>
           <div className="aa-quick" role="group" aria-label="Page theme">{([['Light', 'Ivory'], ['Sepia', 'Sepia'], ['Dark', 'Midnight']] as const).map(([lbl, t]) =>
             <button key={t} className={`aa-th th-${lbl.toLowerCase()} ${d.bg === THEMES[t].bg ? 'on' : ''}`} aria-pressed={d.bg === THEMES[t].bg} onClick={() => setD({ ...d, theme: t, ...THEMES[t] })}>{lbl}</button>)}</div>
           <div className="aa-quick" role="group" aria-label="Text size"><button aria-label="Smaller text" disabled={d.size <= 14} onClick={() => setD({ ...d, size: Math.max(14, d.size - 1) })}>A−</button>
@@ -217,13 +217,13 @@ export default function Reader() {
           <label className="lbl">Pages</label><select aria-label="Pages" className="fx-in" value={ax.spread} onChange={e => setA({ ...ax, spread: e.target.value as A11y['spread'] })}><option value="auto">Automatic</option><option value="one">Single page</option><option value="two">Two-page spread</option></select>
           <label className="lbl">Page turn</label><select aria-label="Page turn" className="fx-in" value={ax.motion} onChange={e => setA({ ...ax, motion: e.target.value as A11y['motion'] })}><option value="slide">Slide</option><option value="flip">Page curl</option><option value="none">Instant</option></select>
           <p className="tiny muted">Font, size, colours and layout are in Design while editing.</p></>}
-        {panel === 'design' && <><h4>Design</h4><DesignPanel compact /><Link className="small" to="/design">Full Design studio →</Link></>}
-        {panel === 'marks' && <><h4>Bookmarks</h4><button className="btn gold sm" onClick={addMark}>+ Bookmark this page</button>
+        {panel === 'design' && <><h2 className="rp-h">Design</h2><DesignPanel compact /><Link className="small" to="/design">Full Design studio →</Link></>}
+        {panel === 'marks' && <><h2 className="rp-h">Bookmarks</h2><button className="btn gold sm" onClick={addMark}>+ Bookmark this page</button>
           <ul className="notes">{marks.map(m => <li key={m.id}><button className="link" onClick={() => goCh(m.chapter, m.para)}>{chapters?.[m.chapter]?.title ?? `Ch. ${m.chapter + 1}`}</button><q>{m.label}…</q><button className="x" onClick={() => setMarks(marks.filter(x => x.id !== m.id))} aria-label="Remove bookmark">×</button></li>)}</ul></>}
-        {panel === 'notes' && <><h4>Highlights &amp; notes</h4>{!hl.length && <p className="small muted">Select any passage to highlight it or attach a note.</p>}
+        {panel === 'notes' && <><h2 className="rp-h">Highlights &amp; notes</h2>{!hl.length && <p className="small muted">Select any passage to highlight it or attach a note.</p>}
           <ul className="notes">{hl.map(h => <li key={h.id}><button className="link" onClick={() => goCh(h.chapter)}>{chapters?.[h.chapter]?.title ?? `Ch. ${h.chapter + 1}`}</button><q>{h.text.slice(0, 160)}</q>{h.note && <p>{h.note}</p>}<button className="x" onClick={() => setHl(hl.filter(x => x.id !== h.id))} aria-label="Remove">×</button></li>)}</ul>
           {hl.length > 0 && <button className="btn ghost sm" onClick={shareNotes}>Share notes as a link</button>}</>}
-        {panel === 'voice' && <><h4>Narration</h4><p className="small muted">Reads the chapter aloud, turning pages as it goes. Natural voices run privately in your browser (Kokoro, open-source); the first use downloads the voice model once (about 90 MB).</p>
+        {panel === 'voice' && <><h2 className="rp-h">Narration</h2><p className="small muted">Reads the chapter aloud, turning pages as it goes. Natural voices run privately in your browser (Kokoro, open-source); the first use downloads the voice model once (about 90 MB).</p>
           <label className="lbl" htmlFor="voice-sel">Voice</label><select id="voice-sel" className="fx-in" value={kVoice ? (kVoice.startsWith('p:') ? kVoice : `k:${kVoice}`) : (voice || 'dev:')} onChange={e => setVoice(e.target.value)}>
             {neuralFor(lang0) ? <optgroup label="Natural voices (English)">{NEURAL_VOICES.map(v => <option key={v.id} value={`k:${v.id}`}>{v.label}</option>)}</optgroup>
               : pv && <optgroup label="Natural voice"><option value={`p:${pv.id}`}>{pv.label}</option></optgroup>}
@@ -295,7 +295,7 @@ function FindPanel({ chapters, q, setQ, go }: { chapters: Chapter[]; q: string; 
     return out; }, [q, chapters]);
   const n = q.trim().toLowerCase();
   const mk = (s: string) => { const i = s.toLowerCase().indexOf(n); return i < 0 ? s : <>{s.slice(0, i)}<mark>{s.slice(i, i + n.length)}</mark>{s.slice(i + n.length)}</>; };
-  return <><h4>Find in this book</h4>
+  return <><h2 className="rp-h">Find in this book</h2>
     <input className="fx-in" autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Word or phrase" aria-label="Find in this book" />
     <p className="small muted" role="status">{n.length < 2 ? 'Type at least two letters. Press / to open this panel.' : `${res.length >= 200 ? '200+' : res.length} match${res.length === 1 ? '' : 'es'}`}</p>
     <ol className="find-list">{res.map((r, i) => <li key={i}><button onClick={() => go(r.c, r.p)}><span className="small muted">{chapters[r.c].title}</span><br />{mk(r.s)}</button></li>)}</ol></>;
