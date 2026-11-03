@@ -14,7 +14,7 @@ for r in library book read shelf plans shelves marketplace clubs notes goals exp
   mkdir -p "dist/$r"; cp dist/index.html "dist/$r/index.html"; done
 touch dist/.nojekyll
 REMOTE=$(git remote get-url origin)
-(cd dist && ls assets | sed 's|^|assets/|' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.stringify(s.trim().split('\\n'))))" > precache.json)
+(cd dist && ls assets | grep -v -e kokoro -e '\.wasm$' | sed 's|^|assets/|' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.stringify(s.trim().split('\\n'))))" > precache.json)
 cd dist && rm -rf .git && git init -q -b gh-pages && git add -A \
   && git -c user.name=Infectoid -c user.email=charlesanthonyleone@users.noreply.github.com commit -qm "Deploy $(cd .. && git rev-parse --short HEAD)" \
   && git push -qf "$REMOTE" gh-pages && rm -rf .git

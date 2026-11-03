@@ -10,6 +10,15 @@ import { assetFetch, assetUrl, localKey } from './assets';
 /** Catalogue entry: only books whose complete text is hosted on Leone Library are listed. */
 export type CatEntry = { id: number; title: string; author: string; authors: Person[]; lang: string[]; subjects: string[]; shelves: string[]; downloads: number; cover: boolean; words: number; chapters: number };
 let catalog: Promise<CatEntry[]> | null = null;
+export const topSubject = (s: string) => s.split(' -- ')[0].replace(/\s*\(.*?\)\s*$/, '').trim();
+/** Books sharing the most top-level subjects and shelves with `id`, from real catalogue metadata only. */
+export function similarBooks(cat: CatEntry[], id: number, n = 8): CatEntry[] {
+  const me = cat.find(c => c.id === id); if (!me) return [];
+  const subs = new Set(me.subjects.map(topSubject)), shelves = new Set(me.shelves);
+  const meA = me.authors.map(a => a.name);
+  return cat.filter(c => c.id !== id).map(c => { let sc = 0; new Set(c.subjects.map(topSubject)).forEach(s => { if (subs.has(s)) sc += 2; }); c.shelves.forEach(s => { if (shelves.has(s)) sc += 1; }); if (c.authors.some(a => meA.includes(a.name))) sc += 1; return [c, sc] as const; })
+    .filter(x => x[1] >= 2).sort((a, b) => b[1] - a[1] || b[0].downloads - a[0].downloads).slice(0, n).map(x => x[0]);
+}
 export function getCatalog() {
   catalog ??= fetch(`${BASE}data/catalog.json`).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
   catalog.catch(() => { catalog = null; });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getCatalog, langName, toBook, type CatEntry } from '../lib/books';
+import { getCatalog, langName, topSubject, toBook, type CatEntry } from '../lib/books';
 import BookCard from '../components/BookCard';
 
 const PER = 48;
@@ -9,20 +9,20 @@ const LEN: Record<string, [number, number, string]> = { short: [0, 40000, 'Short
 
 export default function Library() {
   const [sp, setSp] = useSearchParams();
-  const q = sp.get('q') ?? '', lang = sp.get('lang') ?? '', shelf = sp.get('shelf') ?? '', len = sp.get('len') ?? '', sort = sp.get('sort') ?? 'popular', page = Number(sp.get('page') ?? 1);
+  const q = sp.get('q') ?? '', lang = sp.get('lang') ?? '', shelf = sp.get('shelf') ?? '', subj = sp.get('subject') ?? '', len = sp.get('len') ?? '', sort = sp.get('sort') ?? 'popular', page = Number(sp.get('page') ?? 1);
   const [input, setInput] = useState(q);
   const [cat, setCat] = useState<CatEntry[] | null>(null);
   useEffect(() => { getCatalog().then(setCat).catch(() => setCat([])); }, []);
   useEffect(() => setInput(q), [q]);
   const facets = useMemo(() => {
-    const L = new Map<string, number>(), S = new Map<string, number>();
-    cat?.forEach(c => { c.lang.forEach(l => L.set(l, (L.get(l) ?? 0) + 1)); c.shelves.forEach(s => S.set(s, (S.get(s) ?? 0) + 1)); });
-    return { langs: [...L].sort((a, b) => b[1] - a[1]), shelves: [...S].filter(s => s[1] >= 5).sort((a, b) => a[0].localeCompare(b[0])) };
+    const L = new Map<string, number>(), S = new Map<string, number>(), J = new Map<string, number>();
+    cat?.forEach(c => { c.lang.forEach(l => L.set(l, (L.get(l) ?? 0) + 1)); c.shelves.forEach(s => S.set(s, (S.get(s) ?? 0) + 1)); new Set(c.subjects.map(topSubject)).forEach(s => J.set(s, (J.get(s) ?? 0) + 1)); });
+    return { langs: [...L].sort((a, b) => b[1] - a[1]), shelves: [...S].filter(s => s[1] >= 5).sort((a, b) => a[0].localeCompare(b[0])), subjects: [...J].filter(s => s[1] >= 8).sort((a, b) => a[0].localeCompare(b[0])) };
   }, [cat]);
   const hits = useMemo(() => {
     if (!cat) return [];
     const terms = norm(q).split(/\s+/).filter(Boolean);
-    let r = cat.filter(c => (!lang || c.lang.includes(lang)) && (!shelf || c.shelves.includes(shelf)) && (!len || (c.words >= LEN[len][0] && c.words < LEN[len][1])));
+    let r = cat.filter(c => (!lang || c.lang.includes(lang)) && (!shelf || c.shelves.includes(shelf)) && (!subj || c.subjects.some(x => topSubject(x) === subj)) && (!len || (c.words >= LEN[len][0] && c.words < LEN[len][1])));
     if (terms.length) {
       const scored = r.map(c => { const t = norm(c.title), a = norm(c.author + ' ' + c.authors.map(x => x.name).join(' ')), s = norm(c.subjects.join(' ') + ' ' + c.shelves.join(' '));
         let sc = 0; for (const w of terms) { if (t.includes(w)) sc += 3; else if (a.includes(w)) sc += 2; else if (s.includes(w)) sc += 1; else return null; } return [c, sc] as const; }).filter(Boolean) as (readonly [CatEntry, number])[];
@@ -33,7 +33,7 @@ export default function Library() {
     else if (sort === 'short') r = [...r].sort((a, b) => a.words - b.words);
     else if (!terms.length) r = [...r].sort((a, b) => b.downloads - a.downloads);
     return r;
-  }, [cat, q, lang, shelf, len, sort]);
+  }, [cat, q, lang, shelf, subj, len, sort]);
   const go = (p: Record<string, string>) => { const n = new URLSearchParams(sp); Object.entries(p).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); if (!('page' in p)) n.delete('page'); setSp(n); };
   const pages = Math.max(1, Math.ceil(hits.length / PER));
   const shown = hits.slice((page - 1) * PER, page * PER);
@@ -52,13 +52,14 @@ export default function Library() {
       </form>
       <div className="row gap wrap filters">
         <select className="fx-in" value={shelf} onChange={e => go({ shelf: e.target.value })} aria-label="Shelf"><option value="">All shelves</option>{facets.shelves.map(([s, n]) => <option key={s} value={s}>{s} ({n})</option>)}</select>
+        <select className="fx-in" value={subj} onChange={e => go({ subject: e.target.value })} aria-label="Subject"><option value="">All subjects</option>{facets.subjects.map(([s, n]) => <option key={s} value={s}>{s} ({n})</option>)}</select>
         <select className="fx-in" value={len} onChange={e => go({ len: e.target.value })} aria-label="Length"><option value="">Any length</option>{Object.entries(LEN).map(([k, v]) => <option key={k} value={k}>{v[2]}</option>)}</select>
         <select className="fx-in" value={sort} onChange={e => go({ sort: e.target.value === 'popular' ? '' : e.target.value })} aria-label="Sort"><option value="popular">Most read</option><option value="title">Title A–Z</option><option value="author">Author A–Z</option><option value="short">Shortest first</option></select>
-        {(q || lang || shelf || len) && <button className="btn ghost sm" onClick={() => { setInput(''); setSp(new URLSearchParams()); }}>Clear</button>}
+        {(q || lang || shelf || subj || len) && <button className="btn ghost sm" onClick={() => { setInput(''); setSp(new URLSearchParams()); }}>Clear</button>}
       </div>
-      <div className="status small muted" aria-live="polite">{!cat ? <span><span className="spin" /> Opening the catalogue…</span> : <span>{hits.length.toLocaleString()} book{hits.length === 1 ? '' : 's'}{q && <> for “{q}”</>}{lang && <> in {langName(lang)}</>}{shelf && <> on {shelf}</>} · all complete, all free</span>}</div>
+      <div className="status small muted" aria-live="polite">{!cat ? <span><span className="spin" /> Opening the catalogue…</span> : <span>{hits.length.toLocaleString()} book{hits.length === 1 ? '' : 's'}{q && <> for “{q}”</>}{lang && <> in {langName(lang)}</>}{shelf && <> on {shelf}</>}{subj && <> about {subj}</>} · all complete, all free</span>}</div>
       <div className="grid-books">{shown.map(c => <BookCard key={c.id} b={toBook(c)} />)}</div>
-      {cat && !hits.length && <p className="muted">Nothing matches yet. <a href="/add">Ask for this book</a> — readers' requests are imported once they reach 10 votes.</p>}
+      {cat && !hits.length && <p className="muted">Nothing matches yet. <a href="/add">Ask for this book</a>.</p>}
       {pages > 1 && <div className="row gap center pager">
         <button className="btn ghost" disabled={page <= 1} onClick={() => { go({ page: String(page - 1) }); window.scrollTo(0, 0); }}>← Previous</button>
         <span className="muted">Page {page} of {pages}</span>

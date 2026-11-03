@@ -6,6 +6,7 @@ import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
 import { logReading, shareNotesLink } from '../lib/shared';
 import QuoteCard from '../components/QuoteCard';
+import { NEURAL_VOICES, narrate, neuralFor, onTtsState, ttsState, type Narration } from '../lib/tts';
 
 type Bookmark = { id: string; chapter: number; para: number; label: string; at: number };
 type A11y = { dyslexia: boolean; contrast: boolean; spacing: number; words: number; sr: boolean; spread: 'auto' | 'one' | 'two'; motion: 'flip' | 'slide' | 'none'; ruler?: boolean };
@@ -36,6 +37,7 @@ export default function Reader() {
   const [editing, setEditing] = useState(false); const [card, setCard] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]); const [voice, setVoice] = useStored('voice', ''); const [rate, setRate] = useStored('voice-rate', 1); const [para, setPara] = useState(-1);
+  const nar = useRef<Narration | null>(null); const [tts, setTts] = useState(ttsState()); useEffect(() => onTtsState(setTts), []);
   const [page, setPage] = useState(0); const [pages, setPages] = useState(1); const [turn, setTurn] = useState<'' | 'fwd' | 'back'>('');
   const [vw, setVw] = useState(window.innerWidth);
   const viewRef = useRef<HTMLDivElement>(null); const flowRef = useRef<HTMLDivElement>(null);
@@ -53,7 +55,7 @@ export default function Reader() {
     getChapters(id).then(c => { if (live) setChapters(c); }).catch(() => { if (live) setErr('missing'); });
     return () => { live = false; };
   }, [id]);
-  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => () => { window.speechSynthesis?.cancel(); nar.current?.stop(); }, []);
 
   const chapter = chapters?.[ch];
   const paras = useMemo(() => chapter ? chapter.paras.map((p, i) => edits.find(e => e.chapter === ch && e.para === i)?.text ?? p) : [], [chapter, edits, ch]);
@@ -103,17 +105,23 @@ export default function Reader() {
     const r = s.getRangeAt(0).getBoundingClientRect(); setSel({ text: t, x: Math.min(window.innerWidth - 120, Math.max(120, r.left + r.width / 2)), y: Math.max(60, r.top) });
   };
   const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); setSel(null); window.getSelection()?.removeAllRanges(); };
-  const speak = (from = 0) => {
-    const ss = window.speechSynthesis; if (!ss) return;
-    if (speaking && from === 0) { ss.cancel(); setSpeaking(false); setPara(-1); return; }
-    ss.cancel(); setSpeaking(true);
+  const follow = (i: number) => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
+    if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+  const lang0 = book?.languages[0] ?? 'en';
+  const kVoice = voice.startsWith('k:') ? voice.slice(2) : voice === '' && neuralFor(lang0) ? 'af_heart' : '';
+  const speakDevice = (from: number) => {
+    const ss = window.speechSynthesis; if (!ss) { setSpeaking(false); return; }
     const v = voices.find(x => x.name === voice);
     const next = (i: number) => { if (i >= paras.length) { setSpeaking(false); setPara(-1); return; }
-      const u = new SpeechSynthesisUtterance(paras[i]); u.lang = v?.lang ?? book?.languages[0] ?? 'en'; if (v) u.voice = v; u.rate = rate;
-      u.onstart = () => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
-        if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
-      u.onend = () => next(i + 1); u.onerror = () => { setSpeaking(false); setPara(-1); }; ss.speak(u); };
+      const u = new SpeechSynthesisUtterance(paras[i]); u.lang = v?.lang ?? lang0; if (v) u.voice = v; u.rate = rate;
+      u.onstart = () => follow(i); u.onend = () => next(i + 1); u.onerror = () => { setSpeaking(false); setPara(-1); }; ss.speak(u); };
     next(from);
+  };
+  const speak = (from = 0) => {
+    if (speaking && from === 0) { window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(false); setPara(-1); return; }
+    window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(true);
+    if (kVoice && neuralFor(lang0)) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onEnd: () => { setSpeaking(false); setPara(-1); }, onError: () => speakDevice(from) });
+    else speakDevice(from);
   };
   const addMark = () => { const p = paged ? firstVisible() : 0; const label = (paras[p] ?? '').slice(0, 70); setMarks([...marks, { id: uid(), chapter: ch, para: p, label, at: Date.now() }]); };
   const shareNotes = () => { const who = prompt('Sign your notes as', '') ?? ''; const url = shareNotesLink(id, book?.title.split(/[;:]/)[0] ?? 'Notes', who, hl); navigator.clipboard?.writeText(url).catch(() => {}); prompt('Link copied. Anyone with it can read and import your notes:', url); };
@@ -141,7 +149,7 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
           {id > 0 && <Link to={`/dna?id=${id}`} className="rb-link" title="Statistics and story map measured from this text">DNA</Link>}
-          <button onClick={() => speak()} className={speaking ? 'on' : ''} title="Narrate this chapter with your device's voices">{speaking ? '■ Stop' : '▶ Listen'}</button>
+          <button onClick={() => speak()} className={speaking ? 'on' : ''} title="Narrate this chapter aloud">{speaking ? '■ Stop' : '▶ Listen'}</button>
           <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
           <button onClick={() => { setEditing(!editing); if (editing && panel === 'design') setPanel('none'); }} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
           {editing && <button onClick={() => setPanel(panel === 'design' ? 'none' : 'design')} className={panel === 'design' ? 'on' : ''}>Design</button>}
@@ -167,8 +175,13 @@ export default function Reader() {
         {panel === 'notes' && <><h4>Highlights &amp; notes</h4>{!hl.length && <p className="small muted">Select any passage to highlight it or attach a note.</p>}
           <ul className="notes">{hl.map(h => <li key={h.id}><button className="link" onClick={() => goCh(h.chapter)}>{chapters?.[h.chapter]?.title ?? `Ch. ${h.chapter + 1}`}</button><q>{h.text.slice(0, 160)}</q>{h.note && <p>{h.note}</p>}<button className="x" onClick={() => setHl(hl.filter(x => x.id !== h.id))} aria-label="Remove">×</button></li>)}</ul>
           {hl.length > 0 && <button className="btn ghost sm" onClick={shareNotes}>Share notes as a link</button>}</>}
-        {panel === 'voice' && <><h4>Narration</h4><p className="small muted">Reads the chapter aloud with voices installed on your device, turning pages as it goes.</p>
-          <label className="lbl">Voice</label><select aria-label="Voice" className="fx-in" value={voice} onChange={e => setVoice(e.target.value)}><option value="">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</select>
+        {panel === 'voice' && <><h4>Narration</h4><p className="small muted">Reads the chapter aloud, turning pages as it goes. Natural voices run privately in your browser (Kokoro, open-source); the first use downloads the voice model once (about 90 MB).</p>
+          <label className="lbl" htmlFor="voice-sel">Voice</label><select id="voice-sel" className="fx-in" value={voice || (neuralFor(lang0) ? 'k:af_heart' : 'dev:')} onChange={e => setVoice(e.target.value)}>
+            <optgroup label="Natural voices (English)">{NEURAL_VOICES.map(v => <option key={v.id} value={`k:${v.id}`}>{v.label}</option>)}</optgroup>
+            <optgroup label="Device voices"><option value="dev:">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</optgroup></select>
+          {!neuralFor(lang0) && <p className="small muted">Natural voices are English-only, so this book uses your device's voice.</p>}
+          {tts.phase === 'loading' && <p className="small" role="status">Loading natural voice… {tts.pct}%</p>}
+          {tts.phase === 'failed' && <p className="small muted" role="status">The natural voice couldn't load on this device, so your device's voice is used.</p>}
           <label className="lbl">Speed: {rate.toFixed(2)}×</label><input aria-label="Speed: ×" type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
           <button className="btn gold sm" onClick={() => speak(Math.max(0, paged ? firstVisible() : para))}>{speaking ? 'Restart from this page' : '▶ Start from this page'}</button></>}
       </aside>}

@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { author, cover, dropOffline, getBook, getHosted, isOffline, keepOffline, langName, PD_DEATH_CUTOFF, rightsFor, type Book } from '../lib/books';
+import { author, cover, getCatalog, similarBooks, toBook, topSubject, dropOffline, getBook, getHosted, isOffline, keepOffline, langName, PD_DEATH_CUTOFF, rightsFor, type Book } from '../lib/books';
+import BookCard from '../components/BookCard';
 import { GenCover, RightsTag, hueOf, Soon } from '../components/ui';
 import { load, useProjects, useShelf, type Edit } from '../lib/store';
 
@@ -56,7 +57,7 @@ export default function BookPage() {
             <Link className="btn ghost" to={`/studio/remix?id=${b.id}`}>Remix</Link>
             <Link className="btn ghost" to={`/studio/continue?id=${b.id}`}>Continue</Link>
           </div>
-          {b.subjects && <div className="chips">{b.subjects.slice(0, 6).map(s => <span className="chip" key={s}>{s.split(' -- ')[0]}</span>)}</div>}
+          {b.subjects && <div className="chips">{b.subjects.slice(0, 6).map(s => <Link className="chip" key={s} to={`/library?subject=${encodeURIComponent(topSubject(s))}`}>{topSubject(s)}</Link>)}</div>}
         </div>
       </div>
       <div className="two-col">
@@ -72,6 +73,7 @@ export default function BookPage() {
         </div>
       </div>
       <FirstPage id={b.id} />
+      <MoreLike id={b.id} />
     </div>
   );
 }
@@ -84,4 +86,12 @@ function FirstPage({ id }: { id: number }) {
   return <section className="glass prov first-page" aria-labelledby="fp-h"><h2 className="h3" id="fp-h">The first page</h2><p className="small muted">{p.t}</p>
     {p.ps.map((x, i) => <p key={i} className="fp-p">{x.length > 700 ? x.slice(0, 700) + '…' : x}</p>)}
     <Link className="btn gold sm" to={`/read?id=${id}&ch=${p.ci}`}>Keep reading</Link></section>;
+}
+
+function MoreLike({ id }: { id: number }) {
+  const [list, setList] = useState<ReturnType<typeof similarBooks>>([]);
+  useEffect(() => { getCatalog().then(c => setList(similarBooks(c, id))).catch(() => {}); }, [id]);
+  if (!list.length) return null;
+  return <section className="more-like" aria-labelledby="ml-h"><h2 className="h3" id="ml-h">More like this</h2><p className="small muted">Chosen by shared subjects and shelves in the catalogue.</p>
+    <div className="grid-books">{list.map(c => <BookCard key={c.id} b={toBook(c)} />)}</div></section>;
 }

@@ -21,9 +21,9 @@ export default function Add() {
     <div className="page">
       <div className="eyebrow">Add a book</div>
       <h1 className="display">Ask for a book</h1>
-      <p className="lede">These {all ? all.length.toLocaleString() : '…'} titles are public domain worldwide but not on our shelves yet. Request one: when {VOTE_THRESHOLD} readers ask for it, it's imported, checked for completeness and added to the Library.</p>
+      <p className="lede">These {all ? all.length.toLocaleString() : '…'} titles are public domain worldwide but not on our shelves yet. Requesting one tells us what readers want; books are only added after their full text is imported and checked for completeness.</p>
       <input className="fx-in big" value={q} onChange={e => setQ(e.target.value)} placeholder="Search by title or author" aria-label="Search books to request" />
-      <p className="small muted">Requests are saved on this device now and counted toward the {VOTE_THRESHOLD}-vote threshold when Leone accounts launch. Only complete, verified texts are ever added; nothing here is readable until it is.</p>
+      <p className="note glass small" role="note"><b>Honest note:</b> your requests are saved only in this browser, on this device. They are not sent anywhere yet, so no one else sees them and there is no shared vote count today. When Leone accounts launch they can be counted toward a {VOTE_THRESHOLD}-reader threshold. Clearing your browser data erases them. Only complete, verified texts are ever added; nothing here is readable until it is.</p>
       {owned.length > 0 && <section aria-label="Already in the Library"><h2 className="h5">Already on our shelves</h2><ul className="req-list">{owned.map(b => <li key={b.id} className="glass"><div><b>{b.title}</b><div className="small muted">{b.author}</div></div><Link className="btn sm gold" to={`/read?id=${b.id}`}>Read now</Link></li>)}</ul></section>}
       {mine.length > 0 && <p className="small muted" role="status">You've requested {mine.length} {mine.length === 1 ? 'book' : 'books'}.</p>}
       {owned.length > 0 && hits.length > 0 && <h2 className="h5">Not yet hosted</h2>}

@@ -3,23 +3,28 @@ import type { Lib3DHandle } from '../three/Library3D';
 import type { ReadState } from '../three/reading';
 import type { Chapter } from '../lib/books';
 import { load } from '../lib/store';
+import { narrate, type Narration } from '../lib/tts';
 
 /** The thin reading bar around the open book. Deliberately no settings here: the reader is designed in Edit → Reader. */
 export default function BookHUD({ lib, st, title, chapters, fs, onFs, onClose }: { lib: Lib3DHandle | null; st: ReadState; title: string; chapters: Chapter[] | null; fs: boolean; onFs: () => void; onClose: () => void }) {
-  const [speaking, setSpeaking] = useState(false); const speakRef = useRef(false); const [toc, setToc] = useState(false);
-  const stop = () => { speakRef.current = false; setSpeaking(false); window.speechSynthesis?.cancel(); };
-  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+  const [speaking, setSpeaking] = useState(false); const speakRef = useRef(false); const useDevice = useRef(false); const [toc, setToc] = useState(false);
+  const nar = useRef<Narration | null>(null);
+  const stop = () => { speakRef.current = false; setSpeaking(false); window.speechSynthesis?.cancel(); nar.current?.stop(); };
+  useEffect(() => () => { window.speechSynthesis?.cancel(); nar.current?.stop(); }, []);
   useEffect(() => { if (st.stage === 'closing') stop(); }, [st.stage]);
   const speakNow = () => {
     const ss = window.speechSynthesis; if (!ss || !lib || !speakRef.current) return;
     const txt = lib.text().trim(); const voices = ss.getVoices(), want = load('voice', ''), v = voices.find(x => x.name === want);
     if (!txt) { lib.next(); setTimeout(speakNow, 1400); return; }
+    const turn = () => { const before = JSON.stringify((window as any).__lib3d?.reading?.state()); lib.next(); setTimeout(() => { const after = JSON.stringify((window as any).__lib3d?.reading?.state()); if (after === before) stop(); else speakNow(); }, 1300); };
+    const kv = want.startsWith('k:') ? want.slice(2) : want === '' ? 'af_heart' : '';
+    if (kv && !useDevice.current) { nar.current = narrate([txt], 0, { voice: kv, speed: load('voice-rate', 1), onPara: () => {}, onEnd: turn, onError: () => { useDevice.current = true; speakNow(); } }); return; }
     const parts = txt.match(/[^.!?;]+[.!?;]*["”’)]*\s*/g) ?? [txt]; let i = 0;
     const one = () => { if (!speakRef.current) return; if (i >= parts.length) { const before = JSON.stringify(lib && (window as any).__lib3d?.reading?.state()); lib.next(); setTimeout(() => { const after = JSON.stringify((window as any).__lib3d?.reading?.state()); if (after === before) stop(); else speakNow(); }, 1300); return; }
       const u = new SpeechSynthesisUtterance(parts[i++]); if (v) { u.voice = v; u.lang = v.lang; } u.rate = load('voice-rate', 1); u.onend = one; u.onerror = () => stop(); ss.speak(u); };
     one();
   };
-  const listen = () => { if (speaking) return stop(); if (!window.speechSynthesis) return; speakRef.current = true; setSpeaking(true); speakNow(); };
+  const listen = () => { if (speaking) return stop(); speakRef.current = true; setSpeaking(true); speakNow(); };
   const pageLabel = () => { const n = [st.leftNum, st.rightNum].filter(Boolean) as number[];
     if (st.narrow) { const one = st.focus === 'L' ? st.leftNum : st.rightNum; return one ? `Page ${one}` : st.spread === 0 ? 'Title page' : ''; }
     return n.length === 2 ? `Pages ${n[0]}–${n[1]}` : n.length ? `Page ${n[0]}` : st.spread === 0 ? 'Title page' : ''; };
