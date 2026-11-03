@@ -20,6 +20,8 @@ function scanOff(raw: string, words: string[], needle: string | null, ascii: boo
   pool ??= Array.from({ length: Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 2) - 1)) }, () => { const w = new Worker(new URL('../lib/fts.worker.ts', import.meta.url), { type: 'module' }); w.onmessage = (e: MessageEvent<{ id: number; r: Scan }>) => { waiting.get(e.data.id)?.(e.data.r); waiting.delete(e.data.id); }; return w; });
   const id = ++seq; return new Promise(res => { waiting.set(id, res); pool![rr++ % pool!.length].postMessage({ id, raw, words, needle, ascii }); });
 }
+/** Books whose title names the query come first. */
+const tm = (b: CatEntry, words: string[]) => { const t = fold(b.title); return words.filter(w => t.includes(w)).length; };
 export type Hit = { book: CatEntry; ch: number; chTitle: string; snip: string; count: number };
 export async function fullText(q: string, limit = 25, onHit?: (h: Hit) => void, start = 0, onCands?: (c: CatEntry[], exact: boolean) => void): Promise<{ hits: Hit[]; candidates: number; next: number }> {
   const phrase = q.match(/"([^"]+)"/)?.[1]; const words = [...new Set((fold(q).match(/[\p{L}]{3,24}/gu) ?? []))];
@@ -31,7 +33,7 @@ export async function fullText(q: string, limit = 25, onHit?: (h: Hit) => void, 
   let set = null as Set<number> | null;
   for (const d of lists.sort((a, b) => a.length - b.length)) { let a = 0; const ids = new Set(d.map(x => (a += x))); set = set ? new Set([...set].filter(x => ids.has(x))) : ids; if (!set.size) break; }
   dbg('shards'); const byId = new Map(cat.map(c => [c.id, c]));
-  const cands = (set ? [...set].map(i => byId.get(m.ids[i])!) : cat).filter(Boolean).sort((a, b) => b.downloads - a.downloads);
+  const cands = (set ? [...set].map(i => byId.get(m.ids[i])!) : cat).filter(Boolean).sort((a, b) => tm(b, words) - tm(a, words) || b.downloads - a.downloads);
   const pool = cands.slice(start, start + 96); onCands?.(pool.slice(0, limit), !phrase && live.length === words.length); dbg('cands');
   const hits: Hit[] = []; const needle = phrase ? fold(phrase) : null;
   const ascii = /^[\x00-\x7f]*$/.test((needle ?? '') + words.join(''));
@@ -65,8 +67,8 @@ export default function Search() {
       <form onSubmit={e => { e.preventDefault(); setSp({ q }); }} role="search"><input className="fx-in big" value={q} onChange={e => setQ(e.target.value)} placeholder='e.g. "it was the best of times" or whale lamp oil' aria-label="Search the text of every book" /></form>
       <p className="small"><button className="btn ghost sm" onClick={async () => { const c = await getCatalog(); const b = c[Math.floor(Math.random() * c.length)]; nav(`/read?id=${b.id}&ch=${Math.floor(Math.random() * Math.max(1, b.chapters))}`); }}>Open a random page in a random book</button></p>
       {state === 'busy' && <p className="muted" role="status">{pend ? (pend.exact ? `${pend.c.length ? 'Books containing every word' : 'No book contains all of those words'}, finding the passages…` : 'Checking books for the exact phrase…') : 'Looking up the index…'} {hits.length ? `${hits.length} found` : ''}</p>}
-      {state === 'done' && <p className="muted" role="status">{hits.length ? `${hits.length} books shown, most-read first` : 'No book contains all of those words.'}{cands > hits.length ? ` (${cands.toLocaleString()} books contain every word)` : ''}</p>}
-      <ol className="fts-list">{hits.map(h => <li key={h.book.id} className="glass"><Link to={`/read?id=${h.book.id}&ch=${h.ch}`}><b>{h.book.title}</b></Link> <span className="small muted">{h.book.author} · {h.chTitle} · {h.count} matching paragraph{h.count > 1 ? 's' : ''}</span><p className="snip">{mark(h.snip)}</p></li>)}
+      {state === 'done' && <p className="muted" role="status">{hits.length ? `${hits.length} books shown, best match first` : 'No book contains all of those words.'}{cands > hits.length ? ` (${cands.toLocaleString()} books contain every word)` : ''}</p>}
+      <ol className="fts-list">{(state === 'done' ? [...hits].sort((a, b) => tm(b.book, words) - tm(a.book, words) || b.count - a.count) : hits).map(h => <li key={h.book.id} className="glass"><Link to={`/read?id=${h.book.id}&ch=${h.ch}`}><b>{h.book.title}</b></Link> <span className="small muted">{h.book.author} · {h.chTitle} · {h.count} matching paragraph{h.count > 1 ? 's' : ''}</span><p className="snip">{mark(h.snip)}</p></li>)}
         {state === 'busy' && pend?.exact && pend.c.filter(b => !hits.some(h => h.book.id === b.id)).slice(0, Math.max(0, 20 - hits.length)).map(b => <li key={'p' + b.id} className="glass pending"><Link to={`/book?id=${b.id}`}><b>{b.title}</b></Link> <span className="small muted">{b.author} · finding the passage…</span></li>)}</ol>
       {state === 'done' && next < cands && <button className="btn sm" onClick={() => { setState('busy'); fullText(q0, 20, h => setHits(x => x.some(y => y.book.id === h.book.id) ? x : [...x, h]), next).then(r => { setNext(r.next); setState('done'); }); }}>Search more books ({(cands - next).toLocaleString()} left)</button>}
     </div>
