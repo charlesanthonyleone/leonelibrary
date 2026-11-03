@@ -14,7 +14,7 @@ export const STARTER = [
   { id: 120, title: 'Treasure Island', author: 'Robert Louis Stevenson' }, { id: 43, title: 'Dr Jekyll and Mr Hyde', author: 'Robert Louis Stevenson' },
   { id: 36, title: 'The War of the Worlds', author: 'H. G. Wells' }, { id: 35, title: 'The Time Machine', author: 'H. G. Wells' },
   { id: 1080, title: 'A Modest Proposal', author: 'Jonathan Swift' }, { id: 829, title: "Gulliver's Travels", author: 'Jonathan Swift' },
-  { id: 5200, title: 'Metamorphosis', author: 'Franz Kafka' }, { id: 4300, title: 'Ulysses', author: 'James Joyce' },
+  { id: 4300, title: 'Ulysses', author: 'James Joyce' },
   { id: 1232, title: 'The Prince', author: 'Niccolò Machiavelli' }, { id: 205, title: 'Walden', author: 'Henry David Thoreau' },
 ];
 export function logReading(min: number) { const l = load<Record<string, number>>('readlog', {}); const k = today(); save('readlog', { ...l, [k]: (l[k] || 0) + min }); }

@@ -22,7 +22,7 @@ export function Classroom() {
 export function Community() {
   const shelves = [
     { who: 'The Night Readers', books: [{ id: 345, title: 'Dracula', author: 'Bram Stoker' }, { id: 84, title: 'Frankenstein', author: 'Mary Shelley' }, { id: 43, title: 'Jekyll and Hyde', author: 'R. L. Stevenson' }, { id: 1952, title: 'The Yellow Wallpaper', author: 'C. P. Gilman' }] },
-    { who: 'Russian Winter', books: [{ id: 2554, title: 'Crime and Punishment', author: 'Fyodor Dostoevsky' }, { id: 2680, title: 'Meditations', author: 'Marcus Aurelius' }, { id: 16328, title: 'Beowulf', author: 'Anonymous' }] },
+    { who: 'Russian Winter', books: [{ id: 2554, title: 'Crime and Punishment', author: 'Fyodor Dostoevsky' }, { id: 2680, title: 'Meditations', author: 'Marcus Aurelius' }, ] },
   ];
   return (
     <div className="page wide">
