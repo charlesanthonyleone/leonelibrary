@@ -17,3 +17,10 @@ Worktree `/workspace/ll-r3` (branch lr3, push `HEAD:main`). Staging output: `/wo
 - TOC panel: `tocGroups(chapters.map(c => ({ title: c.title, g: c.group })))` → render group headers.
 - `pendingPara` in Reader is captured from `prog.para` at mount; on the first open after v2 data, migration rewrites
   progress just before chapters arrive. Re-read `prog.para` when chapters load to land exactly.
+
+## Pass 2 (LR3-2, LR3-3)
+- Bible/Apocrypha (ids 7999, 8294, 8001, 124) now split by book name → `g`, and `Chapter N` per scripture chapter (`scripture.py`). Data is v3; `migrateSaved` handles any `v` (marker `chv:id` stores the version).
+- **For the lead: `src/lib/speakable.ts`** `speakable(text, lang)` cleans what the voice says without changing highlight ranges:
+  drops WEB `{footnotes}`, `[12]`/`[Illustration]`, verse numbers `001:001`, `_italics_`; dashes become pauses; Mr./Dr./St./&c./i.e./£5/No. 3 expanded;
+  "Chapter XIV" → "Chapter 14", "Louis XIV" → "Louis the Fourteenth". Wire it in `tts.ts synth()`: `tts.generate(speakable(text), …)`
+  (and the piper/speechSynthesis path). Keep the cache key on the original text. One-line change, yours to make.
