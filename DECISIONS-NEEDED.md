@@ -39,3 +39,6 @@ Shelves, highlights, notes and progress are encrypted in the browser before sync
 
 ## Expand the hosted core to ~6,000 books?
 The spec is a hosted core of ~2,500 top books, growing through "Add a book" and the bring-to-library button. A 6,000-book import was built and verified, but it is **staged only** (box: /workspace/llimport/staged-6000/), not published. The live catalog stays at 2,500. Approve to publish: it's $0 and fits the VPS disk. Otherwise the staged set can be discarded.
+
+## Duplicate editions in the 2,500 core
+About 59 core entries are a second edition of a title already present, e.g. "Moby-Dick; or, The Whale" and "Moby Dick; Or, The Whale". Option: keep one edition each and backfill the freed ~59 slots from the next most-read complete books, which keeps the core at 2,500. Not done yet, because it changes the published core.
