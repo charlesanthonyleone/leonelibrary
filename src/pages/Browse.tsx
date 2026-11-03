@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { cover, getCatalog, personName, toBook, topSubject, type CatEntry } from '../lib/books';
 import { GenCover, hueOf } from '../components/ui';
 import BookCard from '../components/BookCard';
+import { useWiki, WikiCredit } from '../lib/wiki';
 
 /** Store-style genres, mapped to Gutenberg's "Category:" bookshelves. */
 export const GENRES: { slug: string; name: string; shelves: string[] }[] = [
@@ -116,6 +117,7 @@ export function AuthorPage() {
   const p = books[0]?.authors.find(a => a.name === name);
   const subs = useMemo(() => { const m = new Map<string, number>(); books.forEach(c => new Set(c.subjects.map(topSubject)).forEach(s => m.set(s, (m.get(s) ?? 0) + 1))); return [...m].filter(x => realSubj(x[0])).sort((a, b) => b[1] - a[1]).slice(0, 8); }, [books]);
   const words = books.reduce((s, c) => s + c.words, 0);
+  const bio = useWiki('authors', name);
   const related = useMemo(() => { if (!cat || !books.length) return []; const sh = new Set(books.flatMap(c => c.shelves.filter(s => s.startsWith('Category:'))));
     return topAuthors(cat.filter(c => authorKey(c) !== name && c.shelves.some(s => sh.has(s))), 8); }, [cat, books, name]);
   useEffect(() => { if (name) document.title = `${personName(name)}: books · Leone Library`; }, [name]);
@@ -127,6 +129,7 @@ export function AuthorPage() {
       <div><h1 className="display">{personName(name)}</h1>
         <p className="lede">{[life(p), cat ? `${books.length} book${books.length === 1 ? '' : 's'} in the Library` : '', words ? `about ${minutes(words)} of reading` : ''].filter(Boolean).join(' · ')}</p>
         {subs.length > 0 && <div className="row gap wrap">{subs.map(([s]) => <Link key={s} className="chip" to={`/subject?s=${encodeURIComponent(s)}`}>{s}</Link>)}</div>}
+        {bio && <div className="author-bio"><p>{bio.text}</p><WikiCredit w={bio} /></div>}
         {books[0] && <p><Link className="btn gold" to={`/read?id=${books[0].id}`}>Start with {short(books[0].title)}</Link></p>}</div>
     </header>
     {!cat && <Loading err={err} />}

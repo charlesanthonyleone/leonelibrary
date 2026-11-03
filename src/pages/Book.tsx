@@ -4,6 +4,7 @@ import { track } from '../lib/leoneid';
 import { useEffect, useState } from 'react';
 import { author, personName, cover, getCatalog, similarBooks, toBook, topSubject, dropOffline, getBook, getHosted, isOffline, keepOffline, langName, PD_DEATH_CUTOFF, rightsFor, type Book } from '../lib/books';
 import { setSeo } from '../lib/seo';
+import { useWiki, WikiCredit } from '../lib/wiki';
 import BookCard from '../components/BookCard';
 import { GenCover, RightsTag, hueOf, Soon } from '../components/ui';
 import { load, useProjects, useShelf, type Edit } from '../lib/store';
@@ -29,6 +30,7 @@ export default function BookPage() {
   const [sp] = useSearchParams();
   const id = Number(sp.get('id'));
   const [b, setB] = useState<Book | null>(null);
+  const wd = useWiki('descriptions', b?.id);
   const [err, setErr] = useState('');
   const [shelf, setShelf] = useShelf();
   const [projects] = useProjects();
@@ -52,6 +54,7 @@ export default function BookPage() {
           <h1 className="display">{b.title}</h1>
           <p className="by">by {b.authors.map(a => `${personName(a.name)}${a.birth_year ? ` (${a.birth_year}–${a.death_year ?? ''})` : ''}`).join(', ') || 'Anonymous'}</p>
           <RightsTag r={rightsFor(b)} />
+          {wd && <div className="summary wiki-desc"><p>{wd.text}</p><WikiCredit w={wd} /></div>}
           {b.summaries?.[0] && <p className="summary">{b.summaries[0].replace(/\s*\(This is an automatically generated summary\.\)/, '')}</p>}
           <div className="row gap wrap">
             <Link className="btn gold" to={`/read?id=${b.id}`}>Read now</Link>

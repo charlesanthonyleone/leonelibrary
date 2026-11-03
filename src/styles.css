@@ -489,3 +489,5 @@ a.bc-author { color: var(--mute); display: block; } a.bc-author:hover { color: v
 .st-prog { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin-right: 8px; vertical-align: middle; overflow: hidden; } .st-prog span { display: block; height: 100%; background: var(--gold-2, #d8b46a); }
 @media (max-width: 640px) { .st-table thead { display: none; } .st-table tr { display: grid; grid-template-columns: 1fr 1fr; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.08); } .st-table th, .st-table td { border: 0; padding: 4px 6px; } .st-table tbody th { grid-column: 1 / -1; } }
 .reader.paged .book-spread, .tap { touch-action: pan-y; }
+
+.author-bio{max-width:62ch;margin:.6rem 0}.author-bio p{margin:.3rem 0}.wiki-credit{font-size:.8rem;opacity:.8}.wiki-desc p{margin:.3rem 0}

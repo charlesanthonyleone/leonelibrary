@@ -25,3 +25,9 @@ Before: 111 books flagged — broken-title 53, encoding-garbage 29, tiny-chapter
 After rebuilding the 111: 2 flagged, both legitimate (29765 Morse-code heading in Webster's; 16550 short "Index").
 Backup of the replaced books on Contabo: /opt/leonelibrary/backup-pre-qa.
 Known: 28696 Symbolic Logic is 53k words vs 66k before; checked — extraction now matches the HTML (the old build duplicated text), not a loss.
+
+## GUT worker (Gutenberg growth + Wikipedia bios), Nov 3 night — coordination note, I don't edit scripts/pipeline
+- I run scripts/pipeline from origin/main unchanged, with `LL_HTML=/workspace/ll-gut-stage/html` (raw text fallback /workspace/llimport/raw)
+  and `--catalog` = main's catalog + my new entries. My ids: /workspace/ll-gut-stage/g*-ids.txt, from /workspace/ll-cat-stage/beyond-candidates.json
+  (select.py eligible), excluding the catalogue and the CAT worker's b1/b2 batches. HTML from PG mirror gutenberg.pglaf.org, 2 s apart.
+- Wikipedia/Wikidata: scripts/wiki/ (mine) -> public/data/authors.json, descriptions.json. UI: src/lib/wiki.tsx, author bio, book description.
