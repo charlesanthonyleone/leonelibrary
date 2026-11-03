@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { author, getBook, getChapters, rightsFor, type Book, type Chapter } from '../lib/books';
+import { track } from '../lib/leoneid';
 import { THEMES, uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
 import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
@@ -80,6 +81,9 @@ export default function Reader() {
 
   const firstVisible = () => { const v = viewRef.current, f = flowRef.current; if (!v || !f) return 0; const stride = v.clientWidth + gap(two);
     const ps = Array.from(f.querySelectorAll<HTMLElement>('[data-p]')); const hit = ps.find(p => p.offsetLeft >= page * stride - 2); return hit ? Number(hit.dataset.p) : 0; };
+  // Leone ID XP (anonymous on this device unless linked): a page turn after the first view, and finishing the book once.
+  const seen = useRef(''); useEffect(() => { if (!chapters) return; const k = `${ch}:${page}`; if (seen.current && seen.current !== k) track('library.read_page'); seen.current = k;
+    const done = (ch + (pages > 1 ? page / (pages - 1) : 1)) / chapters.length; if (done >= 0.99 && !localStorage.getItem(`lid-fin:${id}`)) { localStorage.setItem(`lid-fin:${id}`, '1'); track('library.finish_book'); } }, [page, ch, chapters]);
   useEffect(() => { if (!chapters) return; const t = setTimeout(() => { const p = paged ? firstVisible() : 0; setProg(o => ({ ...o, chapter: ch, para: p, pct: pages > 1 ? page / (pages - 1) : 0, book: (ch + (pages > 1 ? page / (pages - 1) : 1)) / chapters.length, at: Date.now() })); }, 250); return () => clearTimeout(t); }, [page, pages, ch, chapters]);
 
   const goCh = (n: number, at: number | 'end' = 0) => { pendingPara.current = at; setPage(0); const p = new URLSearchParams(sp); p.set('ch', String(n)); setSp(p, { replace: true }); setPanel('none'); };
@@ -110,7 +114,7 @@ export default function Reader() {
     if (!t || t.length > 600 || editing || !s?.rangeCount) return setSel(null);
     const r = s.getRangeAt(0).getBoundingClientRect(); setSel({ text: t, x: Math.min(window.innerWidth - 120, Math.max(120, r.left + r.width / 2)), y: Math.max(60, r.top) });
   };
-  const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); setSel(null); window.getSelection()?.removeAllRanges(); };
+  const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); track('library.bookmark'); setSel(null); window.getSelection()?.removeAllRanges(); };
   const follow = (i: number) => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
     if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
   // Keep the spoken sentence on screen: turn the page when it crosses onto the next one.

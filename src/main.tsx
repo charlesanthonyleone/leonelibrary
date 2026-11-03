@@ -1,4 +1,6 @@
 import { initAssets } from './lib/assets';
+import { startAutoSync } from './lib/leoneid';
+startAutoSync();
 import '@fontsource/opendyslexic/400.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import React, { useEffect } from 'react';

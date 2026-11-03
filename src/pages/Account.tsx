@@ -3,15 +3,17 @@ import { Link } from 'react-router-dom';
 import { FLAGS } from '../lib/flags';
 import { checkout, credits, magicLink, me, oauthUrl, passkey, signOut, syncPull, type User } from '../lib/account';
 import { newPhrase, validPhrase } from '../lib/e2e';
+import LeoneIdCard, { XpCard } from '../components/LeoneIdCard';
 
 export default function Account() {
   const [u, setU] = useState<User | null | undefined>(undefined); const [email, setEmail] = useState(''); const [msg, setMsg] = useState(''); const [bal, setBal] = useState<Awaited<ReturnType<typeof credits>> | null>(null);
   useEffect(() => { if (FLAGS.accounts) me().then(setU).catch(() => setU(null)); }, []);
   useEffect(() => { if (u && FLAGS.credits) credits().then(setBal).catch(() => {}); }, [u]);
   if (!FLAGS.accounts) return (
-    <div className="page"><div className="eyebrow">Account</div><h1 className="display">Accounts are coming</h1>
+    <div className="page"><div className="eyebrow">Account</div><h1 className="display">Your library</h1>
       <p className="lede">You don't need an account to read. Everything you do now (shelf, progress, highlights, imports, requests) is kept on this device.</p>
-      <p>When accounts launch you'll be able to sign in with Google, GitHub, a passkey or an email link, sync across devices, and have your book requests count toward the vote.</p>
+      <LeoneIdCard />
+      <XpCard />
       <p><Link className="btn gold" to="/library">Keep reading</Link> <Link className="btn ghost" to="/offline">Offline library</Link></p></div>);
   const run = (p: Promise<unknown>, ok: string) => p.then(() => setMsg(ok)).catch(e => setMsg((e as Error).message));
   return (
@@ -25,6 +27,8 @@ export default function Account() {
         <p className="muted">Signed in with {u.providers.join(', ')}.</p>
         <div className="row gap"><button className="btn ghost" onClick={() => passkey('register').then(() => setMsg('Passkey added.')).catch(e => setMsg(e.message))}>Add a passkey</button><button className="btn ghost" onClick={() => signOut().then(() => setU(null))}>Sign out</button></div>
         <SyncCard setMsg={setMsg} />
+        <LeoneIdCard />
+        <XpCard />
         {FLAGS.credits && bal && <section className="glass imp-card"><h2>Credits: {bal.balance}</h2>
           <div className="row gap">{['small', 'medium'].map(p => <button key={p} className="btn gold sm" onClick={() => checkout(p).then(r => { location.href = r.url; }).catch(e => setMsg(e.message))}>Buy {p} pack</button>)}</div>
           <ul className="small">{bal.ledger.map((l, i) => <li key={i}>{new Date(l.at).toLocaleDateString()} · {l.delta > 0 ? '+' : ''}{l.delta} · {l.reason}</li>)}</ul></section>}

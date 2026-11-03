@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom';
+import { track } from '../lib/leoneid';
 import { useEffect, useState } from 'react';
 import { author, cover, getCatalog, similarBooks, toBook, topSubject, dropOffline, getBook, getHosted, isOffline, keepOffline, langName, PD_DEATH_CUTOFF, rightsFor, type Book } from '../lib/books';
 import { setSeo } from '../lib/seo';
@@ -53,7 +54,7 @@ export default function BookPage() {
           {b.summaries?.[0] && <p className="summary">{b.summaries[0].replace(/\s*\(This is an automatically generated summary\.\)/, '')}</p>}
           <div className="row gap wrap">
             <Link className="btn gold" to={`/read?id=${b.id}`}>Read now</Link>
-            <button className="btn ghost" onClick={() => setShelf(on ? shelf.filter(s => s.id !== b.id) : [...shelf, { id: b.id, title: b.title, author: author(b), cover: cover(b), lang: b.languages[0], addedAt: Date.now() }])}>{on ? '✓ On your shelf' : '+ Add to shelf'}</button>
+            <button className="btn ghost" onClick={() => (on || track('library.shelf_add'), setShelf(on ? shelf.filter(s => s.id !== b.id) : [...shelf, { id: b.id, title: b.title, author: author(b), cover: cover(b), lang: b.languages[0], addedAt: Date.now() }]))}>{on ? '✓ On your shelf' : '+ Add to shelf'}</button>
             <Link className="btn ghost" to={`/dna?id=${b.id}`}>Book DNA</Link> <button className="btn ghost" onClick={toggleOff} disabled={off === 'busy'}>{off === 'yes' ? '✓ Saved offline' : off === 'busy' ? 'Saving…' : '⤓ Keep offline'}</button>
             <Link className="btn ghost" to={`/studio/translate?id=${b.id}`}>Translate</Link>
             <Link className="btn ghost" to={`/studio/remix?id=${b.id}`}>Remix</Link>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { track } from '../lib/leoneid';
 import { useState } from 'react';
 import { author, cover, langName, rightsFor, type Book } from '../lib/books';
 import { GenCover, RightsTag, hueOf } from './ui';
@@ -9,7 +10,7 @@ export default function BookCard({ b }: { b: Book }) {
   const [shelf, setShelf] = useShelf();
   const on = shelf.some(s => s.id === b.id);
   const c = cover(b);
-  const toggle = () => setShelf(on ? shelf.filter(s => s.id !== b.id) : [...shelf, { id: b.id, title: b.title, author: author(b), cover: c, lang: b.languages[0], addedAt: Date.now() }]);
+  const toggle = () => (on || track('library.shelf_add'), setShelf(on ? shelf.filter(s => s.id !== b.id) : [...shelf, { id: b.id, title: b.title, author: author(b), cover: c, lang: b.languages[0], addedAt: Date.now() }]));
   return (
     <article className="bookcard">
       <Link to={`/book?id=${b.id}`} className="bc-cover" tabIndex={-1} aria-hidden="true">
