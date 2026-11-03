@@ -7,6 +7,11 @@ const TITLES: Record<string, string> = {
   '/plans': 'Plans', '/account': 'Account', '/studio': 'Studio', '/publishing': 'Leone Publishing', '/rights': 'Rights & public domain',
   '/paths': 'Reading paths', '/dna': 'Book DNA', '/offline': 'Offline books', '/import': 'Import books', '/add': 'Request a book',
   '/classroom': 'Classroom', '/community': 'Community', '/clubs': 'Book clubs', '/goals': 'Reading goals', '/shelves': 'Public shelves',
+  '/read': 'Reading', '/design': 'Cover design', '/marketplace': 'Marketplace', '/notes': 'Shared notes', '/export': 'Export',
+  '/studio/glossary': 'Glossary', '/studio/collab': 'Collaborative studio', '/studio/translate': 'Translate', '/studio/remix': 'Remix',
+  '/studio/continue': 'Continue a story', '/studio/design': 'Cover design', '/publishing/calculator': 'Royalty calculator',
+  '/publishing/submit': 'Submit a manuscript', '/publishing/royalties': 'Royalties', '/storefront': 'Storefront',
+  '/authors': 'Authors', '/subjects': 'Subjects', '/genre': 'Genres', '/author': 'Author', '/subject': 'Subject',
 };
 function tag(sel: string, make: () => HTMLElement): HTMLElement { let el = document.head.querySelector<HTMLElement>(sel); if (!el) { el = make(); document.head.appendChild(el); } return el; }
 function meta(attr: 'name' | 'property', key: string, val: string) { tag(`meta[${attr}="${key}"]`, () => { const m = document.createElement('meta'); m.setAttribute(attr, key); return m; }).setAttribute('content', val); }
@@ -23,4 +28,6 @@ export function setSeo(o: { title?: string; desc?: string; path?: string; image?
   const old = document.getElementById('ld-json'); if (old) old.remove();
   if (o.jsonld) { const s = document.createElement('script'); s.type = 'application/ld+json'; s.id = 'ld-json'; s.textContent = JSON.stringify(o.jsonld); document.head.appendChild(s); }
 }
-export function routeSeo(pathname: string) { if (pathname === '/book') return; const t = TITLES[pathname]; setSeo({ title: t ?? (pathname === '/read' ? 'Reading' : 'Page not found'), path: pathname }); }
+/** Every route has an entry in TITLES (scripts/check-titles.mjs enforces it); pages with per-item titles refine it in their own effect. */
+export const DYNAMIC = new Set(['/book']);
+export function routeSeo(pathname: string) { const p = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname; if (DYNAMIC.has(p)) return; setSeo({ title: TITLES[p] ?? 'Page not found', path: p }); }

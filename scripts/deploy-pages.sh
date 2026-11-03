@@ -3,6 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 node scripts/check-catalog.mjs
+node scripts/check-titles.mjs
 # The Contabo watchdog keeps data/assets.json on gh-pages pointed at the live tunnel; carry its current value forward.
 LIVE=$(curl -sf -m 10 https://library.leoneuniversity.org/data/assets.json || true)
 case "$LIVE" in '{"base":"https://'*) printf '%s\n' "$LIVE" > public/data/assets.json;; esac

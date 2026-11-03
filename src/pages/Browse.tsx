@@ -88,6 +88,7 @@ export function GenrePage() {
   const g = slug === 'classics' ? { name: 'Timeless Classics', shelves: [] as string[] } : GENRES.find(x => x.slug === slug);
   const books = useMemo(() => !cat || !g ? [] : cat.filter(c => slug === 'classics' ? c.shelves.some(s => CLASSIC.test(s)) : c.shelves.some(s => g.shelves.includes(s))).sort(byPop), [cat, g, slug]);
   const authors = useMemo(() => topAuthors(books, 12), [books]);
+  useEffect(() => { document.title = `${g ? g.name : 'Genres'} · Leone Library`; }, [g]);
   if (!g) return <div className="page"><h1 className="display">Genres</h1><GenreChips /></div>;
   return <div className="page browse">
     <nav className="crumbs small" aria-label="Breadcrumb"><Link to="/library">Library</Link> › <span>Genres</span></nav>
