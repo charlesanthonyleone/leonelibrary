@@ -380,3 +380,8 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
   .rb-actions .rb-listen { order: -1; color: var(--gold-2); }
   .rb-actions > * { flex: 0 0 auto; min-height: 44px; scroll-snap-align: start; display: inline-flex; align-items: center; }
 }
+/* LR2: mobile touch targets, reduced motion */
+.nav-burger { min-width: 44px; min-height: 44px; cursor: pointer; }
+@media (max-width: 880px) { .nav nav.open a { padding: 12px 8px; min-height: 44px; } .uni-link { display: none; } }
+.shelf-btn, .btn { min-height: 36px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

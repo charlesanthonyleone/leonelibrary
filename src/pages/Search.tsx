@@ -52,10 +52,10 @@ function prewarm() { meta().catch(() => {}); getCatalog().catch(() => {}); if (t
 
 export default function Search() {
   const nav = useNavigate(); const [sp, setSp] = useSearchParams(); const q0 = sp.get('q') ?? ''; const [q, setQ] = useState(q0);
-  const [hits, setHits] = useState<Hit[]>([]); const [state, setState] = useState<'' | 'busy' | 'done'>(''); const [cands, setCands] = useState(0); const [next, setNext] = useState(0); const [pend, setPend] = useState<{ c: CatEntry[]; exact: boolean } | null>(null);
+  const [hits, setHits] = useState<Hit[]>([]); const [state, setState] = useState<'' | 'busy' | 'done' | 'err'>(''); const [cands, setCands] = useState(0); const [next, setNext] = useState(0); const [pend, setPend] = useState<{ c: CatEntry[]; exact: boolean } | null>(null);
   useEffect(prewarm, []);
   useEffect(() => { if (!q0.trim()) return; let live = true; setHits([]); setPend(null); setState('busy');
-    fullText(q0, 20, h => live && setHits(x => [...x, h]), 0, (c, exact) => live && setPend({ c, exact })).then(r => { if (live) { setCands(r.candidates); setNext(r.next); setState('done'); } }).catch(() => live && setState('done'));
+    fullText(q0, 20, h => live && setHits(x => [...x, h]), 0, (c, exact) => live && setPend({ c, exact })).then(r => { if (live) { setCands(r.candidates); setNext(r.next); setState('done'); } }).catch(() => live && setState('err'));
     return () => { live = false; }; }, [q0]);
   const words = (fold(q0).match(/[\p{L}]{3,24}/gu) ?? []);
   const mark = (s: string) => { const re = new RegExp(`(${words.join('|') || '$^'})`, 'giu'); return s.split(re).map((x, i) => i % 2 ? <mark key={i}>{x}</mark> : x); };
@@ -68,9 +68,11 @@ export default function Search() {
       <p className="small"><button className="btn ghost sm" onClick={async () => { const c = await getCatalog(); const b = c[Math.floor(Math.random() * c.length)]; nav(`/read?id=${b.id}&ch=${Math.floor(Math.random() * Math.max(1, b.chapters))}`); }}>Open a random page in a random book</button></p>
       {state === 'busy' && <p className="muted" role="status">{pend ? (pend.exact ? `${pend.c.length ? 'Books containing every word' : 'No book contains all of those words'}, finding the passages…` : 'Checking books for the exact phrase…') : 'Looking up the index…'} {hits.length ? `${hits.length} found` : ''}</p>}
       {state === 'done' && <p className="muted" role="status">{hits.length ? `${hits.length} books shown, best match first` : 'No book contains all of those words.'}{cands > hits.length ? ` (${cands.toLocaleString()} books contain every word)` : ''}</p>}
-      <ol className="fts-list">{(state === 'done' ? [...hits].sort((a, b) => tm(b.book, words) - tm(a.book, words) || b.count - a.count) : hits).map(h => <li key={h.book.id} className="glass"><Link to={`/read?id=${h.book.id}&ch=${h.ch}`}><b>{h.book.title}</b></Link> <span className="small muted">{h.book.author} · {h.chTitle} · {h.count} matching paragraph{h.count > 1 ? 's' : ''}</span><p className="snip">{mark(h.snip)}</p></li>)}
+      {state === 'err' && <div className="glass" role="alert"><p><b>Search couldn't reach the book index.</b> You may be offline or the text host is busy.</p><button className="btn sm" onClick={() => { setSp({}); setTimeout(() => setSp({ q: q0 }), 0); }}>Try again</button> <Link className="btn ghost sm" to={`/library?q=${encodeURIComponent(q0)}`}>Search titles and authors instead</Link></div>}
+      {state === 'done' && !hits.length && <p className="small">Try fewer or different words, drop the quotes, or <Link to={`/library?q=${encodeURIComponent(q0)}`}>search titles and authors</Link>.</p>}
+      <ol className="fts-list" aria-busy={state === 'busy'}>{(state === 'done' ? [...hits].sort((a, b) => tm(b.book, words) - tm(a.book, words) || b.count - a.count) : hits).map(h => <li key={h.book.id} className="glass"><Link to={`/read?id=${h.book.id}&ch=${h.ch}`}><b>{h.book.title}</b></Link> <span className="small muted">{h.book.author} · {h.chTitle} · {h.count} matching paragraph{h.count > 1 ? 's' : ''}</span><p className="snip">{mark(h.snip)}</p></li>)}
         {state === 'busy' && pend?.exact && pend.c.filter(b => !hits.some(h => h.book.id === b.id)).slice(0, Math.max(0, 20 - hits.length)).map(b => <li key={'p' + b.id} className="glass pending"><Link to={`/book?id=${b.id}`}><b>{b.title}</b></Link> <span className="small muted">{b.author} · finding the passage…</span></li>)}</ol>
-      {state === 'done' && next < cands && <button className="btn sm" onClick={() => { setState('busy'); fullText(q0, 20, h => setHits(x => x.some(y => y.book.id === h.book.id) ? x : [...x, h]), next).then(r => { setNext(r.next); setState('done'); }); }}>Search more books ({(cands - next).toLocaleString()} left)</button>}
+      {state === 'done' && next < cands && <button className="btn sm" onClick={() => { setState('busy'); fullText(q0, 20, h => setHits(x => x.some(y => y.book.id === h.book.id) ? x : [...x, h]), next).then(r => { setNext(r.next); setState('done'); }).catch(() => setState('err')); }}>Search more books ({(cands - next).toLocaleString()} left)</button>}
     </div>
   );
 }

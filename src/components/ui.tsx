@@ -11,6 +11,9 @@ export function useUiMotion() {
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+  useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); document.querySelector<HTMLElement>('.nav-burger')?.focus(); } };
+    const c = (e: MouseEvent) => { if (!(e.target as Element).closest?.('.nav')) setOpen(false); };
+    addEventListener('keydown', k); addEventListener('click', c); return () => { removeEventListener('keydown', k); removeEventListener('click', c); }; }, [open]);
   const L = (to: string, label: string) => <NavLink to={to} onClick={() => setOpen(false)}>{label}</NavLink>;
   return (
     <header className="nav glass">
@@ -18,8 +21,8 @@ export function Nav() {
         <span className="brand-mark">L</span><span className="brand-word">Leone <em>Library</em></span>
       </Link>
       <a className="small muted uni-link" href="https://leoneuniversity.org" title="Leone University">The Library of Leone University ↗</a>
-      <button className="nav-burger" aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
-      <nav className={open ? 'open' : ''}>
+      <button className="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-controls="site-nav" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "✕" : "☰"}</button>
+      <nav id="site-nav" aria-label="Main" className={open ? 'open' : ''}>
         {L('/library', 'Library')}{L('/search', 'Search')}{L('/paths', 'Paths')}{L('/shelf', 'My Shelf')}{L('/studio', 'Studio')}{L('/publishing', 'Publishing')}{L('/plans', 'Plans')}
       </nav>
     </header>

@@ -15,7 +15,8 @@ export default function Library() {
   const q = sp.get('q') ?? '', lang = sp.get('lang') ?? '', shelf = sp.get('shelf') ?? '', subj = sp.get('subject') ?? '', len = sp.get('len') ?? '', sort = sp.get('sort') ?? 'popular', page = Number(sp.get('page') ?? 1);
   const [input, setInput] = useState(q);
   const [cat, setCat] = useState<CatEntry[] | null>(null);
-  useEffect(() => { getCatalog().then(setCat).catch(() => setCat([])); }, []);
+  const [catErr, setCatErr] = useState(false); const [tries, setTries] = useState(0);
+  useEffect(() => { setCatErr(false); getCatalog().then(setCat).catch(() => { setCatErr(true); setCat([]); }); }, [tries]);
   useEffect(() => setInput(q), [q]);
   const facets = useMemo(() => {
     const L = new Map<string, number>(), S = new Map<string, number>(), J = new Map<string, number>();
@@ -69,7 +70,8 @@ export default function Library() {
       <div className="status small muted" aria-live="polite">{!cat ? <span><span className="spin" /> Opening the catalogue…</span> : <span>{hits.length.toLocaleString()} book{hits.length === 1 ? '' : 's'}{q && <> for “{q}”</>}{lang && <> in {langName(lang)}</>}{shelf && <> on {shelf}</>}{subj && <> about {subj}</>} · all complete, all free</span>}</div>
       <div className="grid-books">{shown.map(c => <BookCard key={c.id} b={toBook(c)} />)}</div>
       {suggestion && <p className="lede" role="status">Did you mean <button className="link" onClick={() => { setInput(suggestion); go({ q: suggestion }); }}><b>{suggestion}</b></button>?</p>}
-      {cat && !hits.length && <p className="muted">Nothing matches yet. <Link to="/add">Ask for this book</Link>.</p>}
+      {catErr && <div className="glass" role="alert"><p><b>The catalogue didn't load.</b> Check your connection; books you saved offline are still on <Link to="/offline">your Offline page</Link>.</p><button className="btn sm" onClick={() => { setCat(null); setTries(t => t + 1); }}>Try again</button></div>}
+      {cat && !catErr && !hits.length && <p className="muted">Nothing matches yet. Try a shorter word, <button className="link" onClick={() => { setInput(''); setSp(new URLSearchParams()); }}>clear the filters</button>, <Link to={`/search?q=${encodeURIComponent(q)}`}>search inside the texts</Link>, or <Link to="/add">ask for this book</Link>.</p>}
       {pages > 1 && <div className="row gap center pager">
         <button className="btn ghost" disabled={page <= 1} onClick={() => { go({ page: String(page - 1) }); window.scrollTo(0, 0); }}>← Previous</button>
         <span className="muted">Page {page} of {pages}</span>
