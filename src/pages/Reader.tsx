@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { author, getBook, getChapters, rightsFor, type Book, type Chapter } from '../lib/books';
-import { uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
+import { THEMES, uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
 import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
 import { logReading, shareNotesLink } from '../lib/shared';
@@ -27,7 +27,7 @@ export default function Reader() {
   const [book, setBook] = useState<Book | null>(null);
   const [chapters, setChapters] = useState<Chapter[] | null>(null);
   const [err, setErr] = useState('');
-  const [d] = useDesign();
+  const [d, setD] = useDesign(); const [say, setSay] = useState<[number, number, number] | null>(null); const [paused, setPaused] = useState(false); const swiped = useRef(false);
   const [a, setA] = useStored<A11y>('a11y', A11Y0); const ax = { ...A11Y0, ...a };
   const [prog, setProg] = useStored<Progress & { para?: number; book?: number }>(`progress:${id}`, { chapter: 0, pct: 0, at: 0 });
   const [hl, setHl] = useStored<Highlight[]>(`highlights:${id}`, []);
@@ -113,6 +113,9 @@ export default function Reader() {
   const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); setSel(null); window.getSelection()?.removeAllRanges(); };
   const follow = (i: number) => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
     if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+  // Keep the spoken sentence on screen: turn the page when it crosses onto the next one.
+  useEffect(() => { if (!say || !paged) return; const sp = flowRef.current?.querySelector<HTMLElement>('.say'); const f = flowRef.current, vv = viewRef.current; if (!sp || !f || !vv) return;
+    const pg = Math.floor((sp.getBoundingClientRect().left - f.getBoundingClientRect().left + 2) / (vv.clientWidth + gap(two))); if (pg >= 0 && pg !== page) setPage(pg); }, [say]);
   const lang0 = book?.languages[0] ?? 'en';
   const pv = piperFor(lang0);
   const kVoice = voice.startsWith('k:') && neuralFor(lang0) ? voice.slice(2) : (voice === '' || voice.startsWith('k:') || voice.startsWith('p:')) ? (neuralFor(lang0) ? 'af_heart' : pv ? 'p:' + pv.id : '') : '';
@@ -133,10 +136,14 @@ export default function Reader() {
     start(from);
   };
   const start = (from: number) => {
-    window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(true);
-    if (kVoice) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onEnd: chapterDone, onError: () => speakDevice(from) });
+    window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(true); setPaused(false); setSay(null);
+    if (kVoice) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onChunk: (i, a, b) => setSay([i, a, b]), onEnd: chapterDone, onError: () => speakDevice(from) });
     else speakDevice(from);
   };
+  const togglePause = () => { if (nar.current && kVoice) { if (paused) nar.current.resume(); else nar.current.pause(); }
+    else if (window.speechSynthesis) { if (paused) speechSynthesis.resume(); else speechSynthesis.pause(); } setPaused(!paused); };
+  const skip = (dir: 1 | -1) => { if (nar.current && kVoice) { nar.current.skip(dir); setPaused(false); } else start(Math.max(0, Math.min(paras.length - 1, para + dir))); };
+  const stopAll = () => { window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(false); setPaused(false); setPara(-1); setSay(null); };
   useEffect(() => { if (cont.current && chapter) { cont.current = false; start(0); } }, [chapter]);
   useEffect(() => { if (!sleep || sleep < 0 || !speaking) return; sleepAt.current = Date.now() + sleep * 60000;
     const t = setTimeout(() => { window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(false); setPara(-1); setSleep(0); sleepAt.current = 0; }, sleep * 60000); return () => clearTimeout(t); }, [sleep, speaking]);
@@ -184,6 +191,10 @@ export default function Reader() {
         {panel === 'toc' && <><h4>Contents</h4><ol className="toc">{chapters?.map((c, i) => <li key={i}><button className={i === ch ? 'on' : ''} onClick={() => goCh(i)}>{c.title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></>}
         {panel === 'find' && <FindPanel chapters={chapters ?? []} q={fq} setQ={setFq} go={goCh} />}
         {panel === 'aa' && <><h4>Text &amp; accessibility</h4>
+          <div className="aa-quick" role="group" aria-label="Page theme">{([['Light', 'Ivory'], ['Sepia', 'Sepia'], ['Dark', 'Midnight']] as const).map(([lbl, t]) =>
+            <button key={t} className={`aa-th th-${lbl.toLowerCase()} ${d.bg === THEMES[t].bg ? 'on' : ''}`} aria-pressed={d.bg === THEMES[t].bg} onClick={() => setD({ ...d, theme: t, ...THEMES[t] })}>{lbl}</button>)}</div>
+          <div className="aa-quick" role="group" aria-label="Text size"><button aria-label="Smaller text" disabled={d.size <= 14} onClick={() => setD({ ...d, size: Math.max(14, d.size - 1) })}>A−</button>
+            <span className="aa-size" aria-live="polite">{d.size}px</span><button aria-label="Larger text" disabled={d.size >= 30} onClick={() => setD({ ...d, size: Math.min(30, d.size + 1) })}>A+</button></div>
           <label className="chk"><input type="checkbox" checked={ax.dyslexia} onChange={e => setA({ ...ax, dyslexia: e.target.checked })} /> Dyslexia-friendly font</label>
           <label className="chk"><input type="checkbox" checked={ax.contrast} onChange={e => setA({ ...ax, contrast: e.target.checked })} /> High contrast</label>
           <label className="chk"><input type="checkbox" checked={!!ax.ruler} onChange={e => setA({ ...ax, ruler: e.target.checked })} /> Reading ruler (a band that follows your pointer)</label>
@@ -223,7 +234,9 @@ export default function Reader() {
           {!chapters && <p className="loading"><span className="spin" /> Opening the book…</p>}
           {chapter && <div className="pg-view" ref={viewRef}
             onPointerDown={e => { swipe.current = { x: e.clientX, y: e.clientY, t: Date.now() }; }}
-            onPointerUp={e => { const s = swipe.current; swipe.current = null; if (!s || !paged) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - s.y) && Date.now() - s.t < 700 && !window.getSelection()?.toString()) flip(dx < 0 ? 1 : -1); }}>
+            onPointerUp={e => { const s = swipe.current; swipe.current = null; if (!s || !paged) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - s.y) && Date.now() - s.t < 700 && !window.getSelection()?.toString()) { swiped.current = true; flip(dx < 0 ? 1 : -1); } }}
+            onClick={e => { if (swiped.current) { swiped.current = false; return; } if (!paged || editing || window.getSelection()?.toString() || (e.target as HTMLElement).closest('a,button,mark,input')) return;
+              const r = e.currentTarget.getBoundingClientRect(); flip(e.clientX - r.left < r.width / 2 ? -1 : 1); }}>
             <div className="pg-flow" ref={flowRef} style={paged ? { transform: `translateX(calc(${-page} * (100% + var(--r-gap))))` } : undefined}>
               {ch === 0 && book && <header className="title-page"><div className="tp-orn">❦</div><p className="tp-h1" aria-hidden="true">{book.title.split(/[;:]/)[0]}</p><p>{author(book)}</p><RightsTag r={rightsFor(book)} /></header>}
               <h2 className="ch-title">{chapter.title}</h2>
@@ -231,7 +244,7 @@ export default function Reader() {
               <div className="prose">
                 {paras.map((p, i) => editing
                   ? <p key={i} data-p={i} contentEditable suppressContentEditableWarning className="editable" onBlur={e => { const t = e.currentTarget.textContent ?? ''; if (t !== chapter.paras[i]) setEdits([...edits.filter(x => !(x.chapter === ch && x.para === i)), { chapter: ch, para: i, text: t, at: Date.now() }]); }}>{p}</p>
-                  : <p key={i} data-p={i} className={para === i ? 'speaking' : ''} onClick={() => speaking && speak(i)}>{marked(p, chHl.filter(h => p.includes(h.text)))}</p>)}
+                  : <p key={i} data-p={i} className={para === i ? 'speaking' : ''} onClick={() => speaking && !paged && speak(i)}>{speaking && say && say[0] === i ? <>{p.slice(0, say[1])}<span className="say">{p.slice(say[1], say[2])}</span>{p.slice(say[2])}</> : marked(p, chHl.filter(h => p.includes(h.text)))}</p>)}
               </div>
               {!paged && <nav className="ch-nav"><button className="btn ghost" disabled={ch === 0} onClick={() => goCh(ch - 1)}>← Previous chapter</button><button className="btn ghost" disabled={ch >= chapters!.length - 1} onClick={() => goCh(ch + 1)}>Next chapter →</button></nav>}
             </div>
@@ -239,7 +252,14 @@ export default function Reader() {
         </article>
         {paged && <button className="tap next" aria-label="Next page" onClick={() => flip(1)} />}
       </div>
-      {chapter && <div className="pg-foot" aria-live="polite"><span className="muted small">{chapter.title.slice(0, 48)}</span><span className="muted small">{pageNo}{pageNo && ' · '}Chapter {ch + 1} of {chapters!.length}</span></div>}
+      {speaking && <div className="player glass" role="region" aria-label="Narration player">
+        <div className="pl-info"><span className="pl-ch">{chapter?.title.slice(0, 40)}</span><span className="muted small">{tts.phase === 'loading' && kVoice ? `Loading natural voice ${tts.pct}%` : paused ? 'Paused' : `Reading · ${rate}×`}</span></div>
+        <div className="pl-ctl"><button onClick={() => skip(-1)} aria-label="Previous sentence">⏮</button>
+          <button className="pl-main" onClick={togglePause} aria-label={paused ? 'Resume narration' : 'Pause narration'}>{paused ? '▶' : '❚❚'}</button>
+          <button onClick={() => skip(1)} aria-label="Next sentence">⏭</button>
+          <button onClick={() => setRate(rate >= 2 ? 0.75 : Math.round((rate + 0.25) * 100) / 100)} aria-label={`Speed ${rate} times, change`}>{rate}×</button>
+          <button onClick={stopAll} aria-label="Stop narration">✕</button></div></div>}
+      {chapter && <div className="pg-foot" aria-live="polite"><span className="muted small">{chapter.title.slice(0, 48)}</span><span className="muted small">{pageNo}{pageNo && ' · '}Chapter {ch + 1} of {chapters!.length} · {Math.round(pct)}%</span></div>}
       {card && <QuoteCard text={card} by={book ? author(book) : ''} title={book?.title.split(/[;:]/)[0] ?? ''} onClose={() => setCard(null)} />}
       {sel && <div className="sel-pop glass" style={{ left: sel.x, top: sel.y - 52, position: 'fixed' }} onMouseUp={e => e.stopPropagation()}>
         <button onClick={() => addHl()}>Highlight</button>

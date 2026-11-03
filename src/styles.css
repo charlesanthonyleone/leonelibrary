@@ -385,3 +385,18 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
 @media (max-width: 880px) { .nav nav.open a { padding: 12px 8px; min-height: 44px; } .uni-link { display: none; } }
 .shelf-btn, .btn { min-height: 36px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+/* Reader round 3: quick theme/size, narration player, sentence highlight */
+.aa-quick { display: flex; gap: 6px; align-items: center; margin: 6px 0 10px; }
+.aa-quick button { flex: 1; min-height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); color: inherit; font: inherit; cursor: pointer; }
+.aa-quick button.on { outline: 2px solid var(--gold-2, #d8b46a); }
+.aa-quick button:disabled { opacity: .4; cursor: default; }
+.aa-th.th-light { background: #fbf8f1; color: #1d1d22; } .aa-th.th-sepia { background: #e9dcc3; color: #3b2a18; } .aa-th.th-dark { background: #0b1020; color: #e9e2d0; }
+.aa-size { min-width: 48px; text-align: center; }
+.reader .say { background: color-mix(in srgb, var(--r-acc) 28%, transparent); border-radius: 3px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--r-acc) 28%, transparent); }
+.reader p.speaking:has(.say) { background: none; }
+.player { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 40; display: flex; align-items: center; gap: 14px; padding: 8px 12px 8px 18px; border-radius: 999px; width: min(560px, calc(100vw - 16px)); justify-content: space-between; }
+.pl-info { display: flex; flex-direction: column; min-width: 0; } .pl-ch { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.pl-ctl { display: flex; gap: 4px; } .pl-ctl button { min-width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.06); color: inherit; font-size: 15px; cursor: pointer; }
+.pl-ctl .pl-main { background: var(--gold-2, #d8b46a); color: #111; font-weight: 700; }
+.pl-ctl button:focus-visible { outline: 2px solid var(--gold-2, #d8b46a); outline-offset: 2px; }
+@media (max-width: 520px) { .pl-info { display: none; } .player { width: auto; } }

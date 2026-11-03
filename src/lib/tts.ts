@@ -59,25 +59,34 @@ function synth(tts: Tts | null, text: string, voice: string, speed: number) {
   return p;
 }
 
-export type Narration = { stop: () => void };
-/** Narrate paragraphs from `from`, prefetching the next chunk while one plays. */
-export function narrate(paras: string[], from: number, o: { voice: string; speed: number; onPara: (i: number) => void; onEnd: () => void; onError: (e: unknown) => void }): Narration {
-  let live = true; let src: AudioBufferSourceNode | null = null;
+export type Narration = { stop: () => void; pause: () => void; resume: () => void; skip: (dir: 1 | -1) => void; paused: () => boolean };
+/** Narrate paragraphs from `from`, prefetching the next chunk while one plays.
+ * onChunk reports the paragraph and the [start, end) character range being spoken, for sentence highlighting. */
+export function narrate(paras: string[], from: number, o: { voice: string; speed: number; onPara: (i: number) => void; onChunk?: (i: number, a: number, b: number) => void; onEnd: () => void; onError: (e: unknown) => void }): Narration {
+  let live = true; let src: AudioBufferSourceNode | null = null; let q = 0; let jump: number | null = null; let isPaused = false;
   ctx ??= new AudioContext(); void ctx.resume();
-  const queue: { i: number; t: string }[] = []; paras.forEach((p, i) => { if (i >= from && p.trim()) chunk(p, i === from).forEach(t => queue.push({ i, t })); });
+  const queue: { i: number; t: string; a: number; b: number }[] = [];
+  paras.forEach((p, i) => { if (i < from || !p.trim()) return; let at = 0; chunk(p, i === from).forEach(t => { const k = p.indexOf(t.slice(0, 24), at); const a0 = k >= 0 ? k : at; queue.push({ i, t, a: a0, b: a0 + t.length }); at = a0 + t.length; }); });
   (async () => {
     const tts = o.voice.startsWith('p:') ? null : await loadEngine();
-    for (let q = 0; q < queue.length && live; q++) {
+    for (q = 0; q < queue.length && live; q++) {
+      if (jump !== null) { q = Math.max(0, Math.min(queue.length - 1, jump)); jump = null; }
       const buf = await synth(tts, queue[q].t, o.voice, o.speed);
       if (queue[q + 1]) void synth(tts, queue[q + 1].t, o.voice, o.speed);
       if (!live) return;
       if (q === 0 || queue[q - 1].i !== queue[q].i) o.onPara(queue[q].i);
+      o.onChunk?.(queue[q].i, queue[q].a, queue[q].b);
       await new Promise<void>(res => { src = ctx!.createBufferSource(); src.buffer = buf; src.connect(ctx!.destination); src.onended = () => res(); src.start(); });
+      if (jump !== null) { q = Math.max(-1, Math.min(queue.length - 1, jump) - 1); jump = null; continue; }
       // Breathe like a reader: a short beat between sentences, a longer one between paragraphs.
       if (live && queue[q + 1]) await new Promise(r => setTimeout(r, (queue[q + 1].i !== queue[q].i ? 420 : 90) / o.speed));
     }
     if (live) o.onEnd();
   })().catch(e => { if (live) o.onError(e); });
-  return { stop: () => { live = false; try { src?.stop(); } catch { /* already stopped */ } } };
+  return {
+    stop: () => { live = false; try { src?.stop(); } catch { /* already stopped */ } if (isPaused) void ctx?.resume(); },
+    pause: () => { isPaused = true; void ctx?.suspend(); }, resume: () => { isPaused = false; void ctx?.resume(); }, paused: () => isPaused,
+    skip: dir => { jump = q + dir; if (isPaused) { isPaused = false; void ctx?.resume(); } try { src?.stop(); } catch { /* not started */ } },
+  };
 }
 export const neuralFor = (lang?: string) => !lang || lang.startsWith('en');
