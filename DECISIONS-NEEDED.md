@@ -46,3 +46,10 @@ About 59 core entries are a second edition of a title already present, e.g. "Mob
 ## Round 2 log (2026-11-02, 9:05 PM ET)
 - Narration now uses Kokoro-82M (Apache-2.0; kokoro-js, transformers.js, phonemizer are all Apache-2.0) running in the reader's browser. The model (~90 MB) comes from the Hugging Face CDN at $0. English only; other languages and failed loads use the device voice. No VPS TTS container was needed.
 - Still open: #6-8, #10, #11, the 6,000-book expansion (staged-6000 stays unpublished).
+
+## Natural voices for non-English books (Piper), built but off: needs Charles
+Kokoro only speaks English, so about 240 hosted books (German 72, French 59, Spanish 34, Dutch 19, Portuguese 8, plus a few Russian) still use the device voice. Piper voices now work for them in the reader, tested in-browser on *Le Fantôme de l'Opéra*: first audio in 14 s, and the model downloads once. They're behind `VITE_PIPER=1` and **off** in normal deploys.
+- Code licences: rhasspy/piper is MIT, @diffusionstudio/vits-web is MIT, onnxruntime-web is MIT.
+- Voice licences, from each Piper model card: Thorsten (de) CC0; DaveFX (es) CC0; Nathalie (nl) CC0; Faber (pt) CC0; Denis (ru) CC0; Siwis (fr) CC BY 4.0, credited in the voice panel. The AGPL "tom" voice, the "Unknown" Irina voice and Italian Paola ("See URL") were left out.
+- **The catch:** Piper's phonemizer (piper-phonemize, built on espeak-ng) is **GPL-3.0**. It isn't bundled. The browser fetches it, unmodified, from jsDelivr at runtime, the same way Piper itself uses it. That is normally treated as separate-program use, but it's your call.
+- Approve, and deploys use `VITE_PIPER=1 npm run deploy:pages`. Decline, and nothing changes.

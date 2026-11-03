@@ -48,11 +48,13 @@ export function chunk(p: string, first = false): string[] {
   if (cur.trim()) out.push(cur.trim()); return out;
 }
 
+import { piperSynth } from './piper';
 const cache = new Map<string, Promise<AudioBuffer>>();
 let ctx: AudioContext | null = null;
-function synth(tts: Tts, text: string, voice: string, speed: number) {
+function synth(tts: Tts | null, text: string, voice: string, speed: number) {
   const k = `${voice}|${speed}|${text}`; let p = cache.get(k);
-  if (!p) { p = tts.generate(text, { voice, speed }).then(r => { const b = ctx!.createBuffer(1, r.audio.length, r.sampling_rate); b.copyToChannel(r.audio as Float32Array<ArrayBuffer>, 0); return b; });
+  if (!p && voice.startsWith('p:')) { p = piperSynth(ctx!, voice.slice(2), text, pct => set({ phase: pct < 100 ? 'loading' : 'ready', pct })); p.catch(() => cache.delete(k)); cache.set(k, p); }
+  if (!p) { p = tts!.generate(text, { voice, speed }).then(r => { const b = ctx!.createBuffer(1, r.audio.length, r.sampling_rate); b.copyToChannel(r.audio as Float32Array<ArrayBuffer>, 0); return b; });
     p.catch(() => cache.delete(k)); cache.set(k, p); if (cache.size > 40) cache.delete(cache.keys().next().value!); }
   return p;
 }
@@ -64,7 +66,7 @@ export function narrate(paras: string[], from: number, o: { voice: string; speed
   ctx ??= new AudioContext(); void ctx.resume();
   const queue: { i: number; t: string }[] = []; paras.forEach((p, i) => { if (i >= from && p.trim()) chunk(p, i === from).forEach(t => queue.push({ i, t })); });
   (async () => {
-    const tts = await loadEngine();
+    const tts = o.voice.startsWith('p:') ? null : await loadEngine();
     for (let q = 0; q < queue.length && live; q++) {
       const buf = await synth(tts, queue[q].t, o.voice, o.speed);
       if (queue[q + 1]) void synth(tts, queue[q + 1].t, o.voice, o.speed);

@@ -6,6 +6,7 @@ import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
 import { logReading, shareNotesLink } from '../lib/shared';
 import QuoteCard from '../components/QuoteCard';
+import { piperFor, PIPER_ON } from '../lib/piper';
 import { NEURAL_VOICES, narrate, neuralFor, onTtsState, ttsState, type Narration } from '../lib/tts';
 
 type Bookmark = { id: string; chapter: number; para: number; label: string; at: number };
@@ -108,7 +109,8 @@ export default function Reader() {
   const follow = (i: number) => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
     if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
   const lang0 = book?.languages[0] ?? 'en';
-  const kVoice = voice.startsWith('k:') ? voice.slice(2) : voice === '' && neuralFor(lang0) ? 'af_heart' : '';
+  const pv = piperFor(lang0);
+  const kVoice = voice.startsWith('k:') && neuralFor(lang0) ? voice.slice(2) : (voice === '' || voice.startsWith('k:') || voice.startsWith('p:')) ? (neuralFor(lang0) ? 'af_heart' : pv ? 'p:' + pv.id : '') : '';
   const speakDevice = (from: number) => {
     const ss = window.speechSynthesis; if (!ss) { setSpeaking(false); return; }
     const v = voices.find(x => x.name === voice);
@@ -127,7 +129,7 @@ export default function Reader() {
   };
   const start = (from: number) => {
     window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(true);
-    if (kVoice && neuralFor(lang0)) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onEnd: chapterDone, onError: () => speakDevice(from) });
+    if (kVoice) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onEnd: chapterDone, onError: () => speakDevice(from) });
     else speakDevice(from);
   };
   useEffect(() => { if (cont.current && chapter) { cont.current = false; start(0); } }, [chapter]);
@@ -193,10 +195,12 @@ export default function Reader() {
           <ul className="notes">{hl.map(h => <li key={h.id}><button className="link" onClick={() => goCh(h.chapter)}>{chapters?.[h.chapter]?.title ?? `Ch. ${h.chapter + 1}`}</button><q>{h.text.slice(0, 160)}</q>{h.note && <p>{h.note}</p>}<button className="x" onClick={() => setHl(hl.filter(x => x.id !== h.id))} aria-label="Remove">×</button></li>)}</ul>
           {hl.length > 0 && <button className="btn ghost sm" onClick={shareNotes}>Share notes as a link</button>}</>}
         {panel === 'voice' && <><h4>Narration</h4><p className="small muted">Reads the chapter aloud, turning pages as it goes. Natural voices run privately in your browser (Kokoro, open-source); the first use downloads the voice model once (about 90 MB).</p>
-          <label className="lbl" htmlFor="voice-sel">Voice</label><select id="voice-sel" className="fx-in" value={voice || (neuralFor(lang0) ? 'k:af_heart' : 'dev:')} onChange={e => setVoice(e.target.value)}>
-            <optgroup label="Natural voices (English)">{NEURAL_VOICES.map(v => <option key={v.id} value={`k:${v.id}`}>{v.label}</option>)}</optgroup>
+          <label className="lbl" htmlFor="voice-sel">Voice</label><select id="voice-sel" className="fx-in" value={kVoice ? (kVoice.startsWith('p:') ? kVoice : `k:${kVoice}`) : (voice || 'dev:')} onChange={e => setVoice(e.target.value)}>
+            {neuralFor(lang0) ? <optgroup label="Natural voices (English)">{NEURAL_VOICES.map(v => <option key={v.id} value={`k:${v.id}`}>{v.label}</option>)}</optgroup>
+              : pv && <optgroup label="Natural voice"><option value={`p:${pv.id}`}>{pv.label}</option></optgroup>}
             <optgroup label="Device voices"><option value="dev:">Device default</option>{voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</optgroup></select>
-          {!neuralFor(lang0) && <p className="small muted">Natural voices are English-only, so this book uses your device's voice.</p>}
+          {!neuralFor(lang0) && !pv && <p className="small muted">{PIPER_ON ? 'There is no natural voice for this language yet' : 'Natural voices are English-only for now'}, so this book uses your device's voice.</p>}
+          {pv && kVoice.startsWith('p:') && <p className="tiny muted">Piper voice ({pv.licence}), downloaded once (about 60 MB) and run in your browser.</p>}
           {tts.phase === 'loading' && <p className="small" role="status">Loading natural voice… {tts.pct}%</p>}
           {tts.phase === 'failed' && <p className="small muted" role="status">The natural voice couldn't load on this device, so your device's voice is used.</p>}
           <label className="lbl">Speed: {rate.toFixed(2)}×</label><input aria-label="Narration speed" type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
