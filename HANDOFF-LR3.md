@@ -24,3 +24,9 @@ Worktree `/workspace/ll-r3` (branch lr3, push `HEAD:main`). Staging output: `/wo
   drops WEB `{footnotes}`, `[12]`/`[Illustration]`, verse numbers `001:001`, `_italics_`; dashes become pauses; Mr./Dr./St./&c./i.e./£5/No. 3 expanded;
   "Chapter XIV" → "Chapter 14", "Louis XIV" → "Louis the Fourteenth". Wire it in `tts.ts synth()`: `tts.generate(speakable(text), …)`
   (and the piper/speechSynthesis path). Keep the cache key on the original text. One-line change, yours to make.
+
+## LR3-5 (replacement worker, Nov 2 night)
+- Bible v3 files (124, 7999, 8001, 8294) uploaded to Contabo /opt/leonelibrary/assets/books (old copies in /opt/leonelibrary/backup-pre-v3) and copied into public/books (ll-r3 and leonelibrary checkouts). Live tunnel serves v:3, 66 book groups.
+- `chapterTitle()` in `src/lib/chapters.ts`, applied in `getChapters`/`getText`: all-caps titles → Title Case ("CHAPTER 1. Loomings" → "Chapter 1. Loomings"), roman numerals and acronyms in mixed titles kept. Display-only; data unchanged.
+- For the lead: `Book.tsx` reads `h.chapters[].t` directly; wrap with `chapterTitle` if it shows the title. Pagination/resume/bookmarks live in Reader.tsx (yours) — not touched.
+- Note: the ~10 deploy-pages.sh processes reported were all Record of Law worktrees (rol-*), not Leone Library; left alone.

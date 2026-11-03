@@ -7,7 +7,7 @@ export type Page = { count: number; next: string | null; results: Book[] };
 
 const BASE = import.meta.env.BASE_URL;
 import { assetFetch, assetUrl, localKey } from './assets';
-import { migrateSaved } from './chapters';
+import { chapterTitle, migrateSaved } from './chapters';
 /** Catalogue entry: only books whose complete text is hosted on Leone Library are listed. */
 export type CatEntry = { id: number; title: string; author: string; authors: Person[]; lang: string[]; subjects: string[]; shelves: string[]; downloads: number; cover: boolean; words: number; chapters: number };
 let catalog: Promise<CatEntry[]> | null = null;
@@ -126,12 +126,12 @@ export async function getHostedRaw(id: number): Promise<string> {
   const enc = r.headers.get('content-encoding'); return enc && enc.includes('gzip') ? r.text() : new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
 }
 export async function getChapters(id: number): Promise<Chapter[]> {
-  return (await getHosted(id)).chapters.map(c => ({ title: c.t, paras: c.p, group: c.g }));
+  return (await getHosted(id)).chapters.map(c => ({ title: chapterTitle(c.t), paras: c.p, group: c.g && chapterTitle(c.g) }));
 }
 /** Plain text of the whole book (title + chapters), for tools that want a string. */
 export async function getText(id: number): Promise<string> {
   const h = await getHosted(id);
-  return h.chapters.map(c => `${c.t}\n\n${c.p.join('\n\n')}`).join('\n\n');
+  return h.chapters.map(c => `${chapterTitle(c.t)}\n\n${c.p.join('\n\n')}`).join('\n\n');
 }
 
 

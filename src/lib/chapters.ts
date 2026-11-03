@@ -54,3 +54,31 @@ function findLabel(b: HostedV2, s?: string): [number, number] | null {
   for (let c = 0; c < b.chapters.length; c++) { const i = b.chapters[c].p.findIndex(p => p.includes(k)); if (i >= 0) return [c, i]; }
   return null;
 }
+
+/* ---- chapter titles: all-caps headings read in Title Case ("CHAPTER 1. Loomings" → "Chapter 1. Loomings") ---- */
+const ROMAN = /^(?=[MDCLXVI])M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+const NOT_ROMAN = new Set(['I', 'MIX', 'DIM', 'LID', 'MILD', 'CIVIL', 'VIVID', 'LIVID', 'DID', 'MID', 'DIVI', 'LIVI']);
+const HEAD = /^(CHAPTER|CHAP|BOOK|PART|LETTER|STAVE|CANTO|SECTION|VOLUME|VOL|ACT|SCENE|EPILOGUE|PROLOGUE|PREFACE|INTRODUCTION|APPENDIX|CONCLUSION|NOTES?)$/;
+const SMALL = new Set(['of', 'the', 'and', 'in', 'on', 'to', 'a', 'an', 'at', 'for', 'with', 'by', 'or', 'from', 'as', 'but', 'nor', 'into', 'upon']);
+const isRoman = (w: string) => w.length <= 7 && ROMAN.test(w) && !NOT_ROMAN.has(w);
+const cap = (w: string) => w.charAt(0) + w.slice(1).toLowerCase();
+/** Title Case for chapter titles that shout. Mixed-case titles keep their own casing except an all-caps heading word
+ *  (CHAPTER, BOOK, …). Roman numerals stay upper case. Non-Latin scripts are left alone. */
+export function chapterTitle(t: string): string {
+  if (!t || !/[A-Z]{2}/.test(t)) return t;
+  const letters = t.replace(/[^A-Za-zÀ-ÿ]/g, ''); const words = t.match(/[A-Za-zÀ-ÿ'’]+/g) ?? [];
+  const nonRoman = words.filter(w => !isRoman(w));
+  const upper = nonRoman.join('').replace(/[^A-Za-zÀ-ÿ]/g, '');
+  const shouting = upper.length >= 3 && upper === upper.toUpperCase() && letters.length >= 3;
+  let first = true;
+  return t.replace(/[A-Za-zÀ-ÿ'’]+/g, (w, off: number) => {
+    const isFirst = first; first = false;
+    if (w !== w.toUpperCase() || w.length < 2 && w !== 'A') return w;
+    if (isRoman(w)) return w;
+    if (!shouting && !(isFirst && HEAD.test(w))) return w;            // mixed titles: leave acronyms (USA, NASA) alone
+    const prev = t.slice(0, off).trimEnd(); const startSeg = isFirst || /[.:;—–!?(]$/.test(prev);
+    if (!startSeg && SMALL.has(w.toLowerCase())) return w.toLowerCase();
+    if (/^[A-Z]+['’][A-Z]$/.test(w)) return cap(w);                  // DON'T → Don't
+    return cap(w);
+  });
+}
