@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { getCatalog, getHosted } from '../lib/books';
+import { author, cover, getCatalog, getHosted, toBook, type Book } from '../lib/books';
+import { load } from '../lib/store';
 import { Link } from 'react-router-dom';
 import Room from '../components/Room';
 import { fromPreset } from '../lib/room';
@@ -26,6 +27,7 @@ export default function Home() {
         <p className="hero-facts">Free to read <i /> 4 public-domain sources <i /> 85–90% royalties to you</p>
       </section>
 
+      <ContinueReading />
       <FirstLine />
       <section className="section index-sec">
         <div className="eyebrow">Inside</div>
@@ -78,4 +80,21 @@ function FirstLine() {
   return <section className="section first-line" aria-label="Today's first line"><div className="glass pad"><div className="eyebrow">Today's first line</div>
     <blockquote className="fl-q">“{d.line.replace(/^["“]|["”]$/g, '')}”</blockquote>
     <p className="small muted">{d.title} · {d.author}</p><Link className="btn gold sm" to={`/read?id=${d.id}&ch=${d.ch}`}>Start reading</Link></div></section>;
+}
+
+/** Kindle-style "pick up where you left off": the books this browser was reading most recently. */
+function ContinueReading() {
+  const [rows, setRows] = useState<{ b: Book; pct: number; ch: number }[]>([]);
+  useEffect(() => { const keys = Object.keys(localStorage).filter(k => /^leone:progress:\d+$/.test(k));
+    const ps = keys.map(k => ({ id: +k.split(':')[2], p: load<{ chapter: number; at: number; book?: number }>(k.slice(6), { chapter: 0, at: 0 }) })).filter(x => x.p.at).sort((a, b) => b.p.at - a.p.at).slice(0, 4);
+    if (!ps.length) return; let live = true;
+    getCatalog().then(cat => { if (!live) return; const by = new Map(cat.map(c => [c.id, c]));
+      setRows(ps.flatMap(x => { const c = by.get(x.id); return c ? [{ b: toBook(c), pct: Math.round((x.p.book ?? 0) * 100), ch: x.p.chapter }] : []; })); }).catch(() => {});
+    return () => { live = false; }; }, []);
+  if (!rows.length) return null;
+  return <section className="section continue" aria-labelledby="cr-h"><div className="eyebrow">Your reading</div><h2 className="display" id="cr-h">Continue reading</h2>
+    <ul className="cr-list">{rows.map(({ b, pct, ch }) => <li key={b.id}><Link to={`/read?id=${b.id}`} className="cr-item glass">
+      {cover(b) ? <img src={cover(b)} alt="" width={64} height={96} loading="lazy" /> : <span className="cr-ph" aria-hidden="true" />}
+      <span className="cr-t"><strong>{b.title.split(/[;:]/)[0]}</strong><span className="muted small">{author(b)}</span>
+        <span className="cr-bar" aria-hidden="true"><span style={{ width: `${pct}%` }} /></span><span className="small muted">{pct ? `${pct}% · ` : ''}Chapter {ch + 1}</span></span></Link></li>)}</ul></section>;
 }

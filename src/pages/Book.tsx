@@ -45,11 +45,11 @@ export default function BookPage() {
   return (
     <div className="page book-page">
       <div className="book-hero">
-        <div className="book-cover-lg">{cover(b) && !bad ? <img src={cover(b)} alt={`Cover of ${b.title}`} width={300} height={450} decoding="async" fetchpriority="high" onError={() => setBad(true)} /> : <GenCover title={b.title} author={author(b)} hue={hueOf(b.title)} />}</div>
+        <div className="book-cover-lg">{cover(b) && !bad ? <img src={cover(b)} alt={`Cover of ${b.title}`} width={300} height={450} decoding="async" {...{ fetchpriority: "high" }} onError={() => setBad(true)} /> : <GenCover title={b.title} author={author(b)} hue={hueOf(b.title)} />}</div>
         <div>
           <div className="eyebrow">{b.languages.map(langName).join(' · ')} {b.words ? ` · ${Math.round(b.words / 1000)}k words · ${b.chapterCount} chapters · about ${Math.max(1, Math.round(b.words / 250 / 60))} h` : ''}</div>
           <h1 className="display">{b.title}</h1>
-          <p className="by">by {b.authors.map(a => `${a.name}${a.birth_year ? ` (${a.birth_year}–${a.death_year ?? ''})` : ''}`).join(', ') || 'Anonymous'}</p>
+          <p className="by">by {b.authors.map(a => `${a.name.replace(/^([^,]+),\s*(.+?)(\s*\(.*\))?$/, '$2 $1')}${a.birth_year ? ` (${a.birth_year}–${a.death_year ?? ''})` : ''}`).join(', ') || 'Anonymous'}</p>
           <RightsTag r={rightsFor(b)} />
           {b.summaries?.[0] && <p className="summary">{b.summaries[0].replace(/\s*\(This is an automatically generated summary\.\)/, '')}</p>}
           <div className="row gap wrap">

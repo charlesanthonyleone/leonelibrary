@@ -403,3 +403,10 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
 @media (min-width: 701px) { .reader.listening .pg-foot { visibility: hidden; } .reader.listening .player { bottom: 6px; } }
 .define { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); bottom: 90px; width: min(440px, calc(100vw - 20px)); max-height: 55vh; overflow: auto; padding: 16px 18px; border-radius: 14px; }
 .define .h3 { margin: 0; } .define .def-pos { margin: 10px 0 2px; font-style: italic; color: var(--gold-2, #d8b46a); } .define ol { margin: 0; padding-left: 20px; line-height: 1.5; }
+.cr-list { list-style: none; padding: 0; margin: 18px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.cr-item { display: flex; gap: 14px; padding: 12px; border-radius: 14px; text-decoration: none; color: inherit; align-items: center; transition: transform .2s; }
+.cr-item:hover, .cr-item:focus-visible { transform: translateY(-2px); }
+.cr-item img, .cr-ph { width: 56px; height: 84px; object-fit: cover; border-radius: 4px; flex: none; background: #1b2236; }
+.cr-t { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .cr-t strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--serif); font-size: 18px; }
+.cr-bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; margin: 4px 0 2px; } .cr-bar span { display: block; height: 100%; background: var(--gold-2, #d8b46a); }
+@media (max-width: 520px) { .book-cover-lg { max-width: 190px; margin: 0 auto; } }
