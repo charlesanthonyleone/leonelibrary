@@ -38,14 +38,14 @@ export default function BookPage() {
   useEffect(() => { let live = true; setB(null); setErr(''); getBook(id).then(x => { if (live) setB(x); }).catch(e => { if (live) setErr(String(e.message ?? e)); }); return () => { live = false; }; }, [id]);
   useEffect(() => { if (!b) return; const by = author(b); setSeo({ title: `${b.title}${by ? ` by ${by}` : ''}`, desc: b.summaries?.[0]?.replace(/\s*\(This is an automatically generated summary\.\)/, '') || `Read ${b.title}${by ? ` by ${by}` : ''} free on Leone Library — public domain, with natural narration.`, path: `/book?id=${b.id}`, image: cover(b) || undefined, jsonld: { '@context': 'https://schema.org', '@type': 'Book', name: b.title, author: b.authors.map(a => ({ '@type': 'Person', name: a.name })), inLanguage: b.languages, isAccessibleForFree: true, license: 'https://creativecommons.org/publicdomain/mark/1.0/', url: `https://library.leoneuniversity.org/book?id=${b.id}`, ...(b.words ? { numberOfPages: Math.round(b.words / 275) } : {}) } }); }, [b]);
   if (!id) return <div className="page"><h1 className="display">No book selected</h1><Link to="/library">Browse the Library</Link></div>;
-  if (err) return <div className="page"><h1 className="display">Couldn't load this book</h1><p className="muted">{err}</p><Link className="btn ghost" to="/library">Back to the Library</Link></div>;
+  if (err) { const missing = /not in the Library/.test(err); return <div className="page" role="alert"><h1 className="display">{missing ? 'This book isn’t in the Library' : 'Couldn’t load this book'}</h1><p className="muted">{missing ? `No book has the number ${sp.get('id')}. The link may be mistyped or the book was never added.` : 'The catalogue didn’t answer. Check your connection and try again.'}</p><div className="row gap wrap">{!missing && <button className="btn gold" onClick={() => location.reload()}>Try again</button>}<Link className="btn ghost" to="/library">Browse the Library</Link>{missing && <Link className="btn ghost" to="/add">Request a book</Link>}</div></div>; }
   if (!b) return <div className="page"><p className="muted"><span className="spin" /> Opening the book…</p></div>;
   const on = shelf.some(s => s.id === b.id);
   const derived = projects.filter(p => String(p.sourceId) === String(b.id));
   return (
     <div className="page book-page">
       <div className="book-hero">
-        <div className="book-cover-lg">{cover(b) && !bad ? <img src={cover(b)} alt="" onError={() => setBad(true)} /> : <GenCover title={b.title} author={author(b)} hue={hueOf(b.title)} />}</div>
+        <div className="book-cover-lg">{cover(b) && !bad ? <img src={cover(b)} alt={`Cover of ${b.title}`} width={300} height={450} decoding="async" fetchpriority="high" onError={() => setBad(true)} /> : <GenCover title={b.title} author={author(b)} hue={hueOf(b.title)} />}</div>
         <div>
           <div className="eyebrow">{b.languages.map(langName).join(' · ')} {b.words ? ` · ${Math.round(b.words / 1000)}k words · ${b.chapterCount} chapters · about ${Math.max(1, Math.round(b.words / 250 / 60))} h` : ''}</div>
           <h1 className="display">{b.title}</h1>
