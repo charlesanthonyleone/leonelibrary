@@ -18,7 +18,9 @@ export function bookDna(b: HostedBook): Dna {
   const C = b.chapters.length;
   b.chapters.forEach((c, ci) => { let cw = 0;
     for (const p of c.p) {
-      chars += p.length; for (const q of p.match(/[“"«„][^”"»“]{1,2000}[”"»“]/g) ?? []) quoted += q.length;
+      chars += p.length; const qs = p.match(/[“"«„][^”"»“]{1,2000}[”"»“]/g) ?? [];
+      // French, Spanish and Russian printing marks speech with a dash: a paragraph opening with one, or an em dash after a sentence end, starts a spoken turn.
+      if (!qs.length && /^\s*[—–]/.test(p)) quoted += p.length; else if (!qs.length && /[.!?]\s*—\s*\p{Lu}/u.test(p)) for (const t of p.split(/(?<=[.!?])\s*—/).slice(1)) quoted += t.length; else for (const q of qs) quoted += q.length;
       for (const s of p.split(/(?<!\b(?:Mr|Mrs|Dr|St|Mme|Messrs|Mlle|Prof|Gen|Col|Capt|Rev)\.)(?<=[.!?])\s+(?=[“"'‘(]?\p{Lu})/u)) { const ws = s.match(/[\p{L}’'-]+/gu) ?? []; if (!ws.length) continue; sentences++; if (s.length > longest.length && s.length < 1500) longest = s;
         ws.forEach((w, wi) => { words++; cw++; letters += w.length; if (b.lang === 'en') syl += syllables(w); const l = w.toLowerCase().replace(/[’']s$/, '');
           freq.set(l, (freq.get(l) ?? 0) + 1);
