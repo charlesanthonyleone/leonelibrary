@@ -1,8 +1,9 @@
+import { tocGroups } from '../lib/chapters';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { author, getBook, getChapters, rightsFor, type Book, type Chapter } from '../lib/books';
 import { track } from '../lib/leoneid';
-import { THEMES, uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
+import { THEMES, load, uid, useDesign, useStored, type Edit, type Highlight, type Progress } from '../lib/store';
 import DesignPanel from '../components/DesignPanel';
 import { RightsTag } from '../components/ui';
 import { logReading, shareNotesLink } from '../lib/shared';
@@ -54,7 +55,10 @@ export default function Reader() {
   useEffect(() => {
     let live = true; setChapters(null); setErr('');
     getBook(id).then(b => live && setBook(b)).catch(() => live && setErr('missing'));
-    getChapters(id).then(c => { if (live) setChapters(c); }).catch(() => { if (live) setErr('missing'); });
+    getChapters(id).then(c => { if (!live) return;
+      // getHosted may have migrated saved progress to a new chapter split just now: re-read it so the first open lands exactly.
+      if (!sp.get('ch')) { const f = load<Progress & { para?: number; book?: number }>(`progress:${id}`, { chapter: 0, pct: 0, at: 0 }); if (f.at && (f.chapter !== prog.chapter || f.para !== prog.para)) setProg(f); pendingPara.current = f.para ?? pendingPara.current; }
+      setChapters(c); }).catch(() => { if (live) setErr('missing'); });
     return () => { live = false; };
   }, [id]);
   useEffect(() => () => { window.speechSynthesis?.cancel(); nar.current?.stop(); }, []);
@@ -121,6 +125,7 @@ export default function Reader() {
   const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); track('library.bookmark'); setSel(null); window.getSelection()?.removeAllRanges(); };
   const follow = (i: number) => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
     if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+  useEffect(() => { if (panel === 'toc') document.querySelector<HTMLElement>('.reader-panel .toc button.on')?.scrollIntoView({ block: 'center' }); }, [panel]);
   // Keep the spoken sentence on screen: turn the page when it crosses onto the next one.
   useEffect(() => { if (!say || !paged) return; const sp = flowRef.current?.querySelector<HTMLElement>('.say'); const f = flowRef.current, vv = viewRef.current; if (!sp || !f || !vv) return;
     const pg = Math.floor((sp.getBoundingClientRect().left - f.getBoundingClientRect().left + 2) / (vv.clientWidth + gap(two))); if (pg >= 0 && pg !== page) setPage(pg); }, [say]);
@@ -196,7 +201,7 @@ export default function Reader() {
         <div className="rb-progress" role="progressbar" aria-label="Progress through the book" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
       </div>
       {panel !== 'none' && <aside className="reader-panel glass" aria-label="Reader panel">
-        {panel === 'toc' && <><h4>Contents</h4><ol className="toc">{chapters?.map((c, i) => <li key={i}><button className={i === ch ? 'on' : ''} onClick={() => goCh(i)}>{c.title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></>}
+        {panel === 'toc' && <><h4>Contents</h4>{tocGroups((chapters ?? []).map(c => ({ title: c.title, g: c.group }))).map((g, gi) => <div key={gi} className="toc-g">{g.group && <h5 className="toc-gh">{g.group}</h5>}<ol className="toc">{g.items.map(({ index: i, title }) => <li key={i}><button className={i === ch ? 'on' : ''} aria-current={i === ch ? 'true' : undefined} onClick={() => goCh(i)}>{title}{i < ch ? ' ✓' : ''}</button></li>)}</ol></div>)}</>}
         {panel === 'find' && <FindPanel chapters={chapters ?? []} q={fq} setQ={setFq} go={goCh} />}
         {panel === 'aa' && <><h4>Text &amp; accessibility</h4>
           <div className="aa-quick" role="group" aria-label="Page theme">{([['Light', 'Ivory'], ['Sepia', 'Sepia'], ['Dark', 'Midnight']] as const).map(([lbl, t]) =>
