@@ -22,3 +22,8 @@ QA worker: please check desktop two-column spread with the player, and screen re
 - Reader: new highlights store `para` and jump to it; bookmarks sorted by position, labelled "Group · Chapter", empty state.
 - KJV 7999 "0$:001:001" Opening NOT fixed by me (per lead: new pipeline worker owns it). Cause: REF in scripture.py needs digits, so the first verse of each book (prefix "0$") falls into front → "Opening".
 - Live /account shows the device-only state (no email input rendered), so 848782c2's email/live-region elements can't be checked live.
+
+## Round 3d
+- Pagination verified live (390 + 1440): CSS-column pages, two-page spread on desktop, tap halves / arrows, footer "Page N of M · K pages left in chapter". Phone: tap zones no longer leave a sticky gold frame after a touch; paper height uses 100dvh so the footer stays on screen; footer stacks at ≤520px.
+- axe rescan of the remaining routes (/library … /nope, 25 routes) on live: 0 violations.
+- /account sign-in form: gated by FLAGS.accounts (VITE_ACCOUNTS=1, not set in the Pages build), so the device-only state shows. Separately, Leone ID's issuer https://id.xatmarket.com doesn't answer over HTTPS (http gives 500 via Pingora), so the Leone ID card stays hidden. Left as-is: needs HTTPS on id.xatmarket.com plus an accounts backend (decision for Charles).
