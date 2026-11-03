@@ -42,3 +42,7 @@ The spec is a hosted core of ~2,500 top books, growing through "Add a book" and 
 
 ## Duplicate editions in the 2,500 core
 About 59 core entries are a second edition of a title already present, e.g. "Moby-Dick; or, The Whale" and "Moby Dick; Or, The Whale". Option: keep one edition each and backfill the freed ~59 slots from the next most-read complete books, which keeps the core at 2,500. **Done (approved Nov 2):** 46 duplicate editions removed, keeping the most-read complete edition of each. A duplicate means the same title, author, language and translator; different volumes and translations stay. 46 of the next most-read complete books from the checked 6,000 import took their places, so the core is exactly 2,500.
+
+## Round 2 log (2026-11-02, 9:05 PM ET)
+- Narration now uses Kokoro-82M (Apache-2.0; kokoro-js, transformers.js, phonemizer are all Apache-2.0) running in the reader's browser. The model (~90 MB) comes from the Hugging Face CDN at $0. English only; other languages and failed loads use the device voice. No VPS TTS container was needed.
+- Still open: #6-8, #10, #11, the 6,000-book expansion (staged-6000 stays unpublished).
