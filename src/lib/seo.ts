@@ -6,7 +6,7 @@ const TITLES: Record<string, string> = {
   '/': 'Leone Library — the Library of Leone University', '/library': 'Browse the Library', '/search': 'Search', '/shelf': 'My shelf',
   '/plans': 'Plans', '/account': 'Account', '/studio': 'Studio', '/publishing': 'Leone Publishing', '/rights': 'Rights & public domain',
   '/paths': 'Reading paths', '/dna': 'Book DNA', '/offline': 'Offline books', '/import': 'Import books', '/add': 'Request a book',
-  '/classroom': 'Classroom', '/community': 'Community', '/clubs': 'Book clubs', '/goals': 'Reading goals', '/shelves': 'Public shelves',
+  '/classroom': 'Classroom', '/community': 'Community', '/clubs': 'Book clubs', '/goals': 'Reading goals', '/stats': 'Reading stats', '/shelves': 'Public shelves',
   '/read': 'Reading', '/design': 'Cover design', '/marketplace': 'Marketplace', '/notes': 'Shared notes', '/export': 'Export',
   '/studio/glossary': 'Glossary', '/studio/collab': 'Collaborative studio', '/studio/translate': 'Translate', '/studio/remix': 'Remix',
   '/studio/continue': 'Continue a story', '/studio/design': 'Cover design', '/publishing/calculator': 'Royalty calculator',

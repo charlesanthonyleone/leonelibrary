@@ -33,3 +33,10 @@ QA worker: please check desktop two-column spread with the player, and screen re
 - "Save offline" / "✓ Offline" toggle in the reader bar (keepOffline/dropOffline); verified: saved, network off, reload of another chapter opens.
 - Player: ⏪/⏩ paragraph skip beside ⏮/⏭ sentence skip, ☾ sleep-timer button cycling Off/15/30/60 min/end of chapter (same state as the Voice panel select). Verified with Kokoro on local.
 - Already present and checked: Find in book (67 hits "Netherfield" across chapters), Aa themes Light/Sepia/Dark + size, Design panel font/leading/measure, slide page turn.
+
+## Round 4 (reader worker 2)
+- Sleep timer fades out: natural voices ramp a shared GainNode to silence over the last 30 s (tts.ts `Narration.fade`); device voices lower utterance volume per paragraph. Player ☾ shows a live mm:ss countdown and pulses while fading; 5-min option added; changing the timer mid-fade restores volume. Not verified end-to-end with Kokoro audio in headless (model load); code path typechecks.
+- Page turns: swipe handlers moved to `.book-spread` so swipes starting on the 30% tap zones work on phones (they silently failed before); slow drags over 25% of the width also turn; horizontal trackpad swipe (wheel deltaX) turns; Home/End = first/last page of chapter. Verified with CDP touch at 390px.
+- Notes panel: Export Markdown / Export JSON (`notesExport` in shared.ts; highlights, notes, bookmarks, deep links `read?id=&ch=#pN`, which the reader now honours). /stats has "Export all notes".
+- New /stats page (Stats.tsx): time read, streak, measured reading speed (words from page turns ÷ active minutes, `readstats` key), 7-day bars, per-book progress/time/highlights. Footer shows "N min left in chapter" (desktop) from that speed, 230 wpm until learned. Linked from footer + reader bar.
+- A11y: panel buttons aria-expanded/aria-controls, panel labelled per content, focus moves to panel heading and returns to the opener on Esc/✕, close button, visible focus rings on bar/panel/tap zones/selection toolbar, keyboard-help button. axe: 0 violations on /read and /stats.

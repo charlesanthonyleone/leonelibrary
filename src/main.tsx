@@ -15,6 +15,7 @@ const Add = lazy(() => import('./pages/Add'));
 const Library = lazy(() => import('./pages/Library'));
 const BookPage = lazy(() => import('./pages/Book'));
 const Reader = lazy(() => import('./pages/Reader'));
+const Stats = lazy(() => import('./pages/Stats'));
 const Design = lazy(() => import('./pages/Design'));
 const Shelf = lazy(() => import('./pages/Shelf'));
 const Plans = lazy(() => import('./pages/Plans'));
@@ -72,6 +73,7 @@ function App() {
           <Route path="/clubs" element={<Clubs />} />
           <Route path="/notes" element={<SharedNotes />} />
           <Route path="/goals" element={<Goals />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/studio/glossary" element={<Glossary />} />
           <Route path="/studio/collab" element={<CollabStudio />} />
           <Route path="/export" element={<ExportPage />} />

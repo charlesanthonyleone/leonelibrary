@@ -51,7 +51,7 @@ export function chunk(p: string, first = false): string[] {
 import { piperSynth } from './piper';
 import { speakable } from './speakable';
 const cache = new Map<string, Promise<AudioBuffer>>();
-let ctx: AudioContext | null = null;
+let ctx: AudioContext | null = null; let gain: GainNode | null = null;
 function synth(tts: Tts | null, text: string, voice: string, speed: number) {
   const k = `${voice}|${speed}|${text}`; let p = cache.get(k);
   if (!p && voice.startsWith('p:')) { p = piperSynth(ctx!, voice.slice(2), text, pct => set({ phase: pct < 100 ? 'loading' : 'ready', pct })); p.catch(() => cache.delete(k)); cache.set(k, p); }
@@ -62,12 +62,14 @@ function synth(tts: Tts | null, text: string, voice: string, speed: number) {
   return p;
 }
 
-export type Narration = { stop: () => void; pause: () => void; resume: () => void; skip: (dir: 1 | -1) => void; paused: () => boolean };
+export type Narration = { fade: (seconds: number, to?: number) => void; stop: () => void; pause: () => void; resume: () => void; skip: (dir: 1 | -1) => void; paused: () => boolean };
 /** Narrate paragraphs from `from`, prefetching the next chunk while one plays.
  * onChunk reports the paragraph and the [start, end) character range being spoken, for sentence highlighting. */
 export function narrate(paras: string[], from: number, o: { voice: string; speed: number; onPara: (i: number) => void; onChunk?: (i: number, a: number, b: number) => void; onEnd: () => void; onError: (e: unknown) => void }): Narration {
   let live = true; let src: AudioBufferSourceNode | null = null; let q = 0; let jump: number | null = null; let isPaused = false;
   ctx ??= new AudioContext(); void ctx.resume();
+  // Every narration plays through one gain node so the sleep timer can fade it out instead of cutting off mid-sentence.
+  if (!gain) { gain = ctx.createGain(); gain.connect(ctx.destination); } gain.gain.cancelScheduledValues(ctx.currentTime); gain.gain.setValueAtTime(1, ctx.currentTime);
   const queue: { i: number; t: string; a: number; b: number }[] = [];
   paras.forEach((p, i) => { if (i < from || !p.trim()) return; let at = 0; chunk(p, i === from).forEach(t => { const k = p.indexOf(t.slice(0, 24), at); const a0 = k >= 0 ? k : at; queue.push({ i, t, a: a0, b: a0 + t.length }); at = a0 + t.length; }); });
   (async () => {
@@ -79,7 +81,7 @@ export function narrate(paras: string[], from: number, o: { voice: string; speed
       if (!live) return;
       if (q === 0 || queue[q - 1].i !== queue[q].i) o.onPara(queue[q].i);
       o.onChunk?.(queue[q].i, queue[q].a, queue[q].b);
-      await new Promise<void>(res => { src = ctx!.createBufferSource(); src.buffer = buf; src.connect(ctx!.destination); src.onended = () => res(); src.start(); });
+      await new Promise<void>(res => { src = ctx!.createBufferSource(); src.buffer = buf; src.connect(gain!); src.onended = () => res(); src.start(); });
       if (jump !== null) { q = Math.max(-1, Math.min(queue.length - 1, jump) - 1); jump = null; continue; }
       // Breathe like a reader: a short beat between sentences, a longer one between paragraphs.
       if (live && queue[q + 1]) await new Promise(r => setTimeout(r, (queue[q + 1].i !== queue[q].i ? 420 : 90) / o.speed));
@@ -87,6 +89,7 @@ export function narrate(paras: string[], from: number, o: { voice: string; speed
     if (live) o.onEnd();
   })().catch(e => { if (live) o.onError(e); });
   return {
+    fade: (sec, to = 0.0001) => { const t = ctx!.currentTime; gain!.gain.cancelScheduledValues(t); gain!.gain.setValueAtTime(gain!.gain.value, t); gain!.gain.linearRampToValueAtTime(to, t + Math.max(0.1, sec)); },
     stop: () => { live = false; try { src?.stop(); } catch { /* already stopped */ } if (isPaused) void ctx?.resume(); },
     pause: () => { isPaused = true; void ctx?.suspend(); }, resume: () => { isPaused = false; void ctx?.resume(); }, paused: () => isPaused,
     skip: dir => { jump = q + dir; if (isPaused) { isPaused = false; void ctx?.resume(); } try { src?.stop(); } catch { /* not started */ } },

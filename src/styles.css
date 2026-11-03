@@ -471,3 +471,21 @@ a.bc-author { color: var(--mute); display: block; } a.bc-author:hover { color: v
 .pg-foot .scrub:hover, .pg-foot .scrub:focus-visible { opacity: 1; }
 .pg-foot .scrub-tip { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(10,14,30,.92); color: #f3e9d2; padding: 4px 10px; border-radius: 8px; white-space: nowrap; pointer-events: none; }
 .pl-sleep { min-width: 44px; }
+/* Reader round 4: panel close, focus states, sleep fade, time left, stats */
+.rp-close { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid transparent; border-radius: 8px; color: inherit; font-size: 16px; width: 32px; height: 32px; cursor: pointer; }
+.rp-close:hover { border-color: rgba(216,180,106,.5); } .rp-h:focus { outline: none; } .rp-h:focus-visible { outline: 2px solid var(--gold-2, #d8b46a); outline-offset: 4px; }
+.reader-bar button:focus-visible, .reader-bar a:focus-visible, .reader-panel button:focus-visible, .reader-panel select:focus-visible, .reader-panel input:focus-visible, .sel-pop button:focus-visible, .notes .x:focus-visible { outline: 3px solid var(--gold-2, #d8b46a); outline-offset: 2px; }
+.reader .prose mark:focus-visible, .pg-foot .scrub:focus-visible { outline: 3px solid var(--r-acc, #d8b46a); outline-offset: 2px; }
+.tap:focus-visible { outline: 3px solid var(--r-acc, #d8b46a); outline-offset: -6px; opacity: 1; }
+.notes .x { color: #c9c2b4; min-width: 28px; min-height: 28px; }
+.pl-sleep.fading { animation: llfade 2s ease-in-out infinite alternate; } @keyframes llfade { to { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .pl-sleep.fading { animation: none; } }
+@media (max-width: 520px) { .foot-left { display: none; } }
+.st-week { padding: 18px 20px; margin: 22px 0; } .st-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 140px; align-items: end; margin: 12px 0; }
+.st-bar { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; } .st-fill { width: 100%; max-width: 44px; min-height: 2px; background: linear-gradient(var(--gold-2, #d8b46a), var(--gold, #b8913d)); border-radius: 6px 6px 2px 2px; }
+.st-lbl { font-size: 12px; color: #c9c2b4; }
+.st-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14.5px; } .st-table th, .st-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); vertical-align: middle; }
+.st-table thead th { font-size: 12.5px; color: #c9c2b4; font-weight: 600; } .st-table tbody th { font-weight: 500; }
+.st-prog { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin-right: 8px; vertical-align: middle; overflow: hidden; } .st-prog span { display: block; height: 100%; background: var(--gold-2, #d8b46a); }
+@media (max-width: 640px) { .st-table thead { display: none; } .st-table tr { display: grid; grid-template-columns: 1fr 1fr; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.08); } .st-table th, .st-table td { border: 0; padding: 4px 6px; } .st-table tbody th { grid-column: 1 / -1; } }
+.reader.paged .book-spread, .tap { touch-action: pan-y; }
