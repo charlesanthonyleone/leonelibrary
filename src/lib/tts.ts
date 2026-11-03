@@ -49,12 +49,15 @@ export function chunk(p: string, first = false): string[] {
 }
 
 import { piperSynth } from './piper';
+import { speakable } from './speakable';
 const cache = new Map<string, Promise<AudioBuffer>>();
 let ctx: AudioContext | null = null;
 function synth(tts: Tts | null, text: string, voice: string, speed: number) {
   const k = `${voice}|${speed}|${text}`; let p = cache.get(k);
   if (!p && voice.startsWith('p:')) { p = piperSynth(ctx!, voice.slice(2), text, pct => set({ phase: pct < 100 ? 'loading' : 'ready', pct })); p.catch(() => cache.delete(k)); cache.set(k, p); }
-  if (!p) { p = tts!.generate(text, { voice, speed }).then(r => { const b = ctx!.createBuffer(1, r.audio.length, r.sampling_rate); b.copyToChannel(r.audio as Float32Array<ArrayBuffer>, 0); return b; });
+  const say = speakable(text);
+  if (!p && !say.trim()) { p = Promise.resolve(ctx!.createBuffer(1, 2400, 24000)); cache.set(k, p); }
+  if (!p) { p = tts!.generate(say, { voice, speed }).then(r => { const b = ctx!.createBuffer(1, r.audio.length, r.sampling_rate); b.copyToChannel(r.audio as Float32Array<ArrayBuffer>, 0); return b; });
     p.catch(() => cache.delete(k)); cache.set(k, p); if (cache.size > 40) cache.delete(cache.keys().next().value!); }
   return p;
 }

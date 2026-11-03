@@ -1,3 +1,4 @@
+import { chapterTitle } from '../lib/chapters';
 import { Link, useSearchParams } from 'react-router-dom';
 import { track } from '../lib/leoneid';
 import { useEffect, useState } from 'react';
@@ -84,7 +85,7 @@ export default function BookPage() {
 function FirstPage({ id }: { id: number }) {
   const [p, setP] = useState<{ ci: number; t: string; ps: string[] } | null>(null);
   useEffect(() => { setP(null); getHosted(id).then(h => { const ci = Math.max(0, h.chapters.findIndex((c, i) => i > 0 || !/^opening$/i.test(c.t))); const c = h.chapters[ci] ?? h.chapters[0];
-    setP({ ci, t: c.t, ps: c.p.filter(x => x.length > 60).slice(0, 3) }); }).catch(() => {}); }, [id]);
+    setP({ ci, t: chapterTitle(c.t), ps: c.p.filter(x => x.length > 60).slice(0, 3) }); }).catch(() => {}); }, [id]);
   if (!p || !p.ps.length) return null;
   return <section className="glass prov first-page" aria-labelledby="fp-h"><h2 className="h3" id="fp-h">The first page</h2><p className="small muted">{p.t}</p>
     {p.ps.map((x, i) => <p key={i} className="fp-p">{x.length > 700 ? x.slice(0, 700) + '…' : x}</p>)}

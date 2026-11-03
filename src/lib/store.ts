@@ -54,7 +54,7 @@ export const useDesign = () => {
 export type Settings = { motion: boolean };
 export const useSettings = () => useStored<Settings>('settings', { motion: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
 
-export type Highlight = { id: string; chapter: number; text: string; note?: string; at: number };
+export type Highlight = { id: string; chapter: number; para?: number; text: string; note?: string; at: number };
 export type Progress = { chapter: number; pct: number; at: number };
 export type Edit = { chapter: number; para: number; text: string; at: number };
 
