@@ -235,6 +235,7 @@ em.draft { font-style: normal; font-size: 10px; letter-spacing: .14em; text-tran
 .p3-gallery { background: linear-gradient(120deg, #f3f0ea, #cfc9bf); }
 .p3-atelier { background: linear-gradient(120deg, #a3b39b, #e7f4ef 60%, #8d9c87); }
 .p3-nook { background: linear-gradient(120deg, #6f7f62 0 45%, #7a2e2a 46% 70%, #5a3a22 71%); }
+.p3-fireside { background: linear-gradient(120deg, #3a2618 0 40%, #ff9a4a 41% 48%, #2f4a3a 49%); }
 .p3-library { background: linear-gradient(120deg, #6a2422, #3a2616 60%, #c08a4a); }
 .dnd-shelf { border: 1px dashed rgba(255,255,255,.14); border-radius: 12px; padding: 8px; }
 .dnd-row { display: flex; gap: 4px; flex-wrap: wrap; min-height: 30px; }

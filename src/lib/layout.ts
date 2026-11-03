@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { load, save, uid } from './store';
 
 /** A full, editable 3D room layout. Everything is saved on this device only. Units are metres. */
-export type ItemKind = 'plant' | 'fern' | 'lamp' | 'candle' | 'rug' | 'globe' | 'frame' | 'figurine' | 'vase' | 'clock' | 'armchair' | 'sidetable' | 'footstool';
+export type ItemKind = 'plant' | 'fern' | 'lamp' | 'candle' | 'rug' | 'globe' | 'frame' | 'figurine' | 'vase' | 'clock' | 'armchair' | 'sidetable' | 'footstool' | 'fireplace' | 'ladder';
 export type Item = { id: string; kind: ItemKind; x: number; y: number; z: number; ry: number; s: number; color?: string };
 export type SpineTex = 'cloth' | 'leather' | 'paper' | 'gilt';
 export type BookSlot = { id: number | string; title: string; author: string; shelf: number; color: string; tex: SpineTex; h: number; t: number };
@@ -27,7 +27,7 @@ export const WALLS: [Wall, string][] = [['plaster', 'Warm plaster'], ['sage', 'S
 export const FLOORS: [Floor, string][] = [['oak', 'Oak boards'], ['marble', 'Marble'], ['grass', 'Grass'], ['snow', 'Snow']];
 export const VIEWS: [View, string][] = [['meadow', 'Meadow & falls'], ['snow', 'Snowy park'], ['night', 'Night sky'], ['interior', 'Sunlit room']];
 export const WEATHERS: [Weather, string][] = [['none', 'Clear'], ['snow', 'Snowfall'], ['rain', 'Rain'], ['dust', 'Dust motes'], ['fireflies', 'Fireflies'], ['petals', 'Petals']];
-export const ITEMS: [ItemKind, string][] = [['plant', 'Potted plant'], ['fern', 'Fern'], ['lamp', 'Reading lamp'], ['candle', 'Candle'], ['rug', 'Rug'], ['globe', 'Globe'], ['frame', 'Picture frame'], ['figurine', 'Bust figurine'], ['vase', 'Vase'], ['clock', 'Mantel clock'], ['armchair', 'Wingback armchair'], ['sidetable', 'Side table'], ['footstool', 'Footstool']];
+export const ITEMS: [ItemKind, string][] = [['plant', 'Potted plant'], ['fern', 'Fern'], ['lamp', 'Reading lamp'], ['candle', 'Candle'], ['rug', 'Rug'], ['globe', 'Globe'], ['frame', 'Picture frame'], ['figurine', 'Bust figurine'], ['vase', 'Vase'], ['clock', 'Mantel clock'], ['armchair', 'Wingback armchair'], ['sidetable', 'Side table'], ['footstool', 'Footstool'], ['fireplace', 'Fireplace'], ['ladder', 'Library ladder']];
 export const SPINE_COLORS = ['#5a1f24', '#1f3b2d', '#1d2a4a', '#6b4a22', '#2b2420', '#7a5a2a', '#3d1f3f', '#24403f', '#8a2f1f', '#c9b48a'];
 export const TEXES: [SpineTex, string][] = [['cloth', 'Cloth'], ['leather', 'Leather'], ['paper', 'Paper'], ['gilt', 'Gilt-tooled']];
 
@@ -52,7 +52,8 @@ export const PRESETS3D: { id: string; name: string; blurb: string; free?: boolea
   { id: 'gallery', name: 'Stone Gallery', blurb: 'Pale stone shelves in museum daylight.', make: () => base({ preset: 'gallery', mat: 'marble', wall: 'plaster', floor: 'marble', time: 12, lampOn: false, items: [it('figurine', 0, 1.08, .05, 0, 1.2), it('vase', -.6, 1.08, .05), it('plant', 1.15, 0, .3, 0, 1.2), it('frame', .6, 1.08, -.05, 0, 1)] }) },
   { id: 'atelier', name: 'Glass Atelier', blurb: 'Glass and steel against sage walls.', make: () => base({ preset: 'atelier', mat: 'glass', wall: 'sage', floor: 'oak', time: 10, lampOn: false, items: [it('fern', 1.1, 0, .3), it('vase', .5, 1.08, .05, 0, .9), it('frame', -.5, 1.08, -.05)] }) },
   { id: 'library', name: 'Oxblood Library', blurb: 'Five tall walnut shelves, rain at the window.', make: () => base({ preset: 'library', wall: 'oxblood', shelves: 5, width: 1.9, time: 17, weather: 'rain', cam: { az: -.3, el: .1, dist: 3.9 }, items: [it('lamp', -1.1, 0, .35, .4), it('globe', 1.2, 0, .4, 0, 1.6), it('rug', 0, 0, .9, 0, 1.5, '#3a2a1a')] }) },
-  { id: 'nook', name: 'Reading Nook', blurb: 'A wingback chair, side table and lamp by the shelves.', free: true, make: () => base({ preset: 'nook', wall: 'sage', time: 20, cam: { az: -.5, el: .2, dist: 4.8 }, items: [it('armchair', -1.35, 0, .55, .6, 1, '#7a2e2a'), it('sidetable', -.72, 0, .75), it('lamp', -1.75, 0, .2, .4), it('footstool', -1.0, 0, 1.15, .6, 1, '#7a2e2a'), it('rug', -.6, 0, .9, 0, 1.3, '#3b4a5e'), it('plant', 1.15, 0, .3, 0, 1.1)] }) },
+  { id: 'nook', name: 'Reading Nook', blurb: 'A wingback chair, side table and lamp by the shelves.', free: true, make: () => base({ preset: 'nook', wall: 'sage', time: 20, cam: { az: -.5, el: .2, dist: 4.8 }, items: [it('armchair', -1.35, 0, .55, .6, 1, '#7a2e2a'), it('sidetable', -.72, 0, .75), it('lamp', -1.75, 0, .2, .4), it('footstool', -1.0, 0, 1.15, .6, 1, '#7a2e2a'), it('ladder', .55, 0, .3), it('rug', -.6, 0, .9, 0, 1.3, '#3b4a5e'), it('plant', 1.15, 0, .3, 0, 1.1)] }) },
+  { id: 'fireside', name: 'Fireside', blurb: 'A stone fireplace, a ladder and a wingback chair on a snowy night.', make: () => base({ preset: 'fireside', wall: 'wood', floor: 'oak', time: 22, ambient: .4, weather: 'snow', cam: { az: .35, el: .16, dist: 5 }, items: [it('fireplace', 1.75, 0, .2, -.9), it('armchair', .95, 0, 1.25, -2.3, 1, '#2f4a3a'), it('sidetable', 1.55, 0, 1.25), it('ladder', -.5, 0, .3), it('rug', .9, 0, .9, 0, 1.3, '#6d2a22'), it('candle', -.4, 1.08, .08)] }) },
 ];
 export const FREE_PRESETS = PRESETS3D.filter(p => p.free).map(p => p.id);
 

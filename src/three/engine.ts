@@ -427,6 +427,26 @@ export class Engine {
         mesh(new THREE.CylinderGeometry(.24, .24, .03, 48), wood, 0, .56, 0);
         lathe([[0, 0], [.14, 0], [.14, .02], [.05, .05], [.03, .2], [.04, .4], [.025, .54], [0, .55]], wood);
         break; }
+      case 'fireplace': {
+        const stone = new THREE.MeshPhysicalMaterial({ color: it.color ?? '#b9ab95', roughness: .85, normalMap: noiseNormal(30, 2, 5), normalScale: new THREE.Vector2(.6, .6) });
+        const soot = new THREE.MeshStandardMaterial({ color: '#141010', roughness: 1 });
+        const blk = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material = stone) => mesh(new RoundedBoxGeometry(w, h, d, 2, .01), m, x, y, z);
+        blk(.18, .9, .3, -.41, .45, 0); blk(.18, .9, .3, .41, .45, 0); blk(1, .16, .34, 0, .98, 0); blk(1.1, .04, .4, 0, 1.08, .01); // jambs, lintel, mantel shelf
+        blk(.64, .74, .04, 0, .37, -.13, soot); blk(1.04, .04, .5, 0, .02, .06);                                                   // firebox back, hearth
+        const log = new THREE.MeshStandardMaterial({ color: '#4a3020', roughness: .9 });
+        for (const [x, ry] of [[-.08, .35], [.08, -.35]] as const) { const l = mesh(new THREE.CylinderGeometry(.04, .045, .42, 10), log, x, .08, 0); l.rotation.set(0, ry, Math.PI / 2); }
+        if (L.lampOn) {
+          for (let i = 0; i < 5; i++) { const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: softSprite(), color: i % 2 ? '#ff8a2a' : '#ffc060', blending: THREE.AdditiveBlending, depthWrite: false }));
+            fl.scale.set(.14 + r() * .08, .22 + r() * .14, 1); fl.position.set((r() - .5) * .3, .2 + r() * .08, .02); g.add(fl); }
+          const pl = new THREE.PointLight('#ff9a4a', 2.2, 4, 2); pl.position.set(0, .3, .25); g.add(pl);
+        }
+        break; }
+      case 'ladder': {
+        const wood = new THREE.MeshPhysicalMaterial({ color: it.color ?? '#6b4428', roughness: .5, clearcoat: .5 });
+        const lad = new THREE.Group(); lad.rotation.x = -.22; g.add(lad);
+        for (const x of [-.2, .2]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(.035, 1.9, .05), wood); rail.position.set(x, .95, 0); rail.castShadow = true; lad.add(rail); }
+        for (let k = 0; k < 7; k++) { const rung = new THREE.Mesh(new THREE.CylinderGeometry(.014, .014, .4, 10), wood); rung.rotation.z = Math.PI / 2; rung.position.set(0, .22 + k * .25, 0); rung.castShadow = true; lad.add(rung); }
+        break; }
       case 'globe': {
         lathe([[0, 0], [.08, 0], [.08, .012], [.03, .02], [.012, .06], [.012, .1], [0, .1]], new THREE.MeshPhysicalMaterial({ color: '#4a2f1d', roughness: .4, clearcoat: .6 }));
         const tilt = new THREE.Group(); tilt.position.y = .22; tilt.rotation.z = .41; g.add(tilt);
