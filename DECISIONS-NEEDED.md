@@ -36,3 +36,6 @@ Shelves, highlights, notes and progress are encrypted in the browser before sync
 > reads the quick tunnel's address from cloudflared's internal metrics and repoints `data/assets.json` on gh-pages. It authenticates with a
 > deploy key scoped to this repo only (GitHub deploy key id 168532828), stored at /opt/leonelibrary/secrets on the VPS, never in the repo.
 > It restarts with Docker (`restart: unless-stopped`), so it survives reboots. Revoke anytime in repo Settings → Deploy keys.
+
+## Expand the hosted core to ~6,000 books?
+The spec is a hosted core of ~2,500 top books, growing through "Add a book" and the bring-to-library button. A 6,000-book import was built and verified, but it is **staged only** (box: /workspace/llimport/staged-6000/), not published. The live catalog stays at 2,500. Approve to publish: it's $0 and fits the VPS disk. Otherwise the staged set can be discarded.
