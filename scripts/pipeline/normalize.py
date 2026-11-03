@@ -30,6 +30,7 @@ def clean_title(t, maxlen=90):
     t=re.sub(r'^[-–—\s\[*]+|[-–—\s\]*]+$','',t)
     t=re.sub(r'\s*\{[^}]*\}\s*$','',t)            # trailing page refs {12}
     t=re.sub(r'^pg_?[0-9ivxlcdm½]+(?=[A-Z§\s])\s*','',t)   # leaked page anchor 'pg_viiiPREFACE'
+    t=re.sub(r'\b([IVXLCDM]+|\d+)ToC(?=[.:\s]|$)',r'\1',t)   # glued back-to-contents link 'Chapter IToC. Colonial'
     t=re.sub(r'\s*(\[\d+\]?|\*?\(\d+\)|\*+)\s*$','',t)   # trailing footnote markers '§ 3[136', '84. *(2)'
     t=re.sub(r'(?<=\w)\s*\.\s*$','',t)              # trailing full stop
     t=re.sub(r'\s*--\s*',' — ',t)
@@ -41,7 +42,7 @@ def clean_title(t, maxlen=90):
     if len(t)>maxlen: t=t[:maxlen-1].rstrip()+'…'
     return t
 def book_title(t):
-    t=re.sub(r'\s*[:/;]?\s*\$[a-z]\b\s*',' ',t or '').strip(' :/;')   # MARC subfield codes ': $b' leaked from catalogue records
+    t=re.sub(r'\s*[:/;]?\s*\$[a-z]\b\s*',': ',t or '').strip(' :/;'); t=re.sub(r':\s*:',':',t)   # MARC subfield codes ': $b' leaked from catalogue records
     t=re.sub(r'\s*\r?\n\s*(Contents|Table of Contents)\s*$','',t.strip(),flags=re.I)
     t=re.sub(r'[ \t]+',' ',t).strip()
     t=re.sub(r'(?<=\S)\s+(Table of )?Contents$','',t,flags=re.I)   # TOC heading leaked into the title

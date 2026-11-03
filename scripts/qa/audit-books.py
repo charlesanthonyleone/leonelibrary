@@ -31,7 +31,7 @@ for c in cat:
             t=ch.get('t') or ''; ps=ch.get('p') or []; w=sum(len(x.split())+len(CJK.findall(x))//2 for x in ps)
             if w==0: f('empty-chapter',t)
             elif w<20 and len(chs)>1: f('tiny-chapter',t)
-            if not t.strip() or caps(t) or len(t)>120 or GARB.search(t) or JUNK.search(t) or (re.match(r'^[\W\d_]+$',t) and not OKT.match(t)): f('broken-title',t)
+            if not t.strip() or caps(t) or len(t)>120 or GARB.search(t) or JUNK.search(t) or re.search(r'\b([IVXLCDM]+|\d+)ToC\b',t) or (re.match(r'^[\W\d_]+$',t) and not OKT.match(t)): f('broken-title',t)
             for x in ps:
                 if BOIL.search(x): f('gutenberg-boilerplate',x)
                 if JUNK.search(x): f('junk-prefix',x)

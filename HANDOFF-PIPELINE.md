@@ -33,3 +33,10 @@ Known: 28696 Symbolic Logic is 53k words vs 66k before; checked — extraction n
 - Wikipedia/Wikidata: scripts/wiki/ (mine) -> public/data/authors.json, descriptions.json. UI: src/lib/wiki.tsx, author bio, book description.
 - Batch g1 (300 books, ids in /workspace/ll-gut-stage/built1.txt): built with scripts/pipeline unchanged (headings 257, html-patterns 28, text-patterns 15, 0 errors);
   texts + covers (from /workspace/llimport/staged-6000/covers) uploaded to Contabo with --skip-old-files. audit-books.py on the 300: broken-title 4, encoding-garbage 3, tiny-chapter 5 (report /workspace/ll-gut-stage/audit1.json) — pipeline worker's call whether to rule-fix.
+
+## Audit of the 497 b1 books (Nov 3, 00:30 ET)
+- The 497 (commit 49a92cd3) had been built with the pre-fix /workspace/ll-pipe copy. Rebuilt all 497 (+6 older books hit by the new ToC rule; 2 of those ids are not in the catalogue, skipped) with scripts/pipeline.
+  audit-books: 12 flagged -> 6 (remaining are real headings: '+ + +', '(1805–15)', '1807-1812', 'The End'). validate-books boilerplate 89 -> 1. No word loss; 264 books gained text (tail-text fix).
+- Rules: normalize.clean_title strips glued 'ToC' back-links ('Chapter IToC.' -> 'Chapter I.'); book_title turns MARC ' : $b ' into ': ' (was a bare space); audit flags 'ToC' leftovers.
+- Licence/metadata: all 497 match Gutenberg RDF (copyright=false, people died <=1955), titles/authors match RDF. None retired.
+- Uploaded to Contabo assets/books; replaced copies in /opt/leonelibrary/backup-pre-a497.
