@@ -103,11 +103,18 @@ export function getHosted(id: number): Promise<HostedBook> {
       if (id < 0) { const b = await (await import('./private')).privateGet(id); if (!b) throw new Error('not-hosted'); return b; }
       const rp = assetFetch(`books/${id}.json.gz`); rp.catch(() => {}); // fetch the text while the catalogue confirms it's hosted
       if (!(await isBundled(id))) throw new Error('not-hosted');
-      const r = await rp;
-      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
-      const enc = r.headers.get('content-encoding');
-      const txt = enc && enc.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
-      const b = JSON.parse(txt) as HostedBook; migrateSaved(b); return b;
+      const read = async (r: Response) => { if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+        const enc = r.headers.get('content-encoding');
+        return JSON.parse(enc && enc.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text()) as HostedBook; };
+      let b = await read(await rp);
+      // A browser or offline copy from before a re-split: the catalogue knows the current chapter count, so fetch fresh.
+      const want = (await getCatalog()).find(c => c.id === id)?.chapters;
+      if (want && want !== b.chapters.length) {
+        try { const r2 = await fetch(assetUrl(`books/${id}.json.gz`), { cache: 'reload' }); const keep = r2.clone(); const fresh = await read(r2);
+          if (fresh.chapters.length !== b.chapters.length) { b = fresh;
+            if (await isOffline(id)) void caches.open(BOOKS_CACHE).then(c => c.put(localKey(`books/${id}.json.gz`), keep)).catch(() => {}); } } catch { /* keep the copy we have */ }
+      }
+      migrateSaved(b); return b;
     })());
     bookCache.get(id)!.catch(() => bookCache.delete(id));
   }
