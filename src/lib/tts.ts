@@ -34,10 +34,17 @@ export function loadEngine(): Promise<Tts> {
   return enginePromise;
 }
 
-/** Split a paragraph into sentence groups short enough for the model (~350 chars). */
-export function chunk(p: string): string[] {
-  const s = p.match(/[^.!?;]+[.!?;]*["”’)\]]*\s*/g) ?? [p]; const out: string[] = []; let cur = '';
-  for (const x of s) { if ((cur + x).length > 350 && cur) { out.push(cur.trim()); cur = ''; } cur += x.length > 350 ? x.slice(0, 350) : x; }
+/** Split a paragraph into sentence groups short enough for the model (~350 chars).
+ * Abbreviations like "Mr." or "St." don't end a sentence, and the first group is kept short so the voice starts quickly. */
+const ABBR = /\b(Mr|Mrs|Ms|Dr|St|Mt|Jr|Sr|Capt|Col|Gen|Lt|Rev|Prof|Hon|Messrs|vs|etc|viz|i\.e|e\.g|No|Vol|ch)\.\s/gi;
+export function chunk(p: string, first = false): string[] {
+  const safe = p.replace(ABBR, m => m.replace('.', '\u2024'));
+  const s = (safe.match(/[^.!?]+[.!?]+["”’)\]]*\s*|[^.!?]+$/g) ?? [safe]).map(x => x.replace(/\u2024/g, '.'));
+  const out: string[] = []; let cur = ''; const cap = () => (first && !out.length ? 160 : 350);
+  // A sentence longer than the model's window is split at clause breaks (; : — ,), never cut off.
+  const parts = s.flatMap(x => { if (x.length <= 350) return [x]; const r: string[] = []; let c = '';
+    for (const y of x.match(/[^;:—,]+[;:—,]?\s*/g) ?? [x]) { if ((c + y).length > 350 && c) { r.push(c); c = ''; } c += y; while (c.length > 350) { const k = c.lastIndexOf(' ', 350); r.push(c.slice(0, k > 0 ? k : 350)); c = c.slice(k > 0 ? k : 350); } } if (c) r.push(c); return r; });
+  for (const x of parts) { if ((cur + x).length > cap() && cur) { out.push(cur.trim()); cur = ''; } cur += x; }
   if (cur.trim()) out.push(cur.trim()); return out;
 }
 
@@ -55,7 +62,7 @@ export type Narration = { stop: () => void };
 export function narrate(paras: string[], from: number, o: { voice: string; speed: number; onPara: (i: number) => void; onEnd: () => void; onError: (e: unknown) => void }): Narration {
   let live = true; let src: AudioBufferSourceNode | null = null;
   ctx ??= new AudioContext(); void ctx.resume();
-  const queue: { i: number; t: string }[] = []; paras.forEach((p, i) => { if (i >= from && p.trim()) chunk(p).forEach(t => queue.push({ i, t })); });
+  const queue: { i: number; t: string }[] = []; paras.forEach((p, i) => { if (i >= from && p.trim()) chunk(p, i === from).forEach(t => queue.push({ i, t })); });
   (async () => {
     const tts = await loadEngine();
     for (let q = 0; q < queue.length && live; q++) {
@@ -64,6 +71,8 @@ export function narrate(paras: string[], from: number, o: { voice: string; speed
       if (!live) return;
       if (q === 0 || queue[q - 1].i !== queue[q].i) o.onPara(queue[q].i);
       await new Promise<void>(res => { src = ctx!.createBufferSource(); src.buffer = buf; src.connect(ctx!.destination); src.onended = () => res(); src.start(); });
+      // Breathe like a reader: a short beat between sentences, a longer one between paragraphs.
+      if (live && queue[q + 1]) await new Promise(r => setTimeout(r, (queue[q + 1].i !== queue[q].i ? 420 : 90) / o.speed));
     }
     if (live) o.onEnd();
   })().catch(e => { if (live) o.onError(e); });

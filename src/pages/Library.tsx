@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getCatalog, langName, topSubject, toBook, type CatEntry } from '../lib/books';
 import BookCard from '../components/BookCard';
 
 const PER = 48;
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/** Edit distance with an early exit once it passes `max`. */
+function lev(a: string, b: string, max: number) { if (Math.abs(a.length - b.length) > max) return max + 1; let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) { const cur = [i]; let lo = i; for (let j = 1; j <= b.length; j++) { cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); lo = Math.min(lo, cur[j]); } if (lo > max) return max + 1; prev = cur; } return prev[b.length]; }
 const LEN: Record<string, [number, number, string]> = { short: [0, 40000, 'Short (under 40k words)'], mid: [40000, 120000, 'Novel length'], long: [120000, 1e9, 'Long (120k+ words)'] };
 
 export default function Library() {
@@ -34,6 +37,12 @@ export default function Library() {
     else if (!terms.length) r = [...r].sort((a, b) => b.downloads - a.downloads);
     return r;
   }, [cat, q, lang, shelf, subj, len, sort]);
+  // Typo help: "dostoevski" or "sherlok" finds the nearest title or author word in the catalogue.
+  const vocab = useMemo(() => { const m = new Map<string, number>(); cat?.forEach(c => norm(c.title + ' ' + c.author + ' ' + c.authors.map(x => x.name).join(' ')).split(/[^\p{L}]+/u).forEach(w => w.length >= 4 && m.set(w, (m.get(w) ?? 0) + c.downloads))); return m; }, [cat]);
+  const suggestion = useMemo(() => { if (!cat || hits.length || !q.trim()) return '';
+    const fixed = norm(q).split(/\s+/).filter(Boolean).map(w => { if (vocab.has(w) || w.length < 4) return w; const max = w.length >= 7 ? 2 : 1; let best = w, bd = max + 1, bn = 0;
+      for (const [v, n] of vocab) { const d = lev(w, v, max); if (d < bd || (d === bd && n > bn)) { best = v; bd = d; bn = n; } } return best; }).join(' ');
+    return fixed !== norm(q) ? fixed : ''; }, [cat, hits.length, q, vocab]);
   const go = (p: Record<string, string>) => { const n = new URLSearchParams(sp); Object.entries(p).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); if (!('page' in p)) n.delete('page'); setSp(n); };
   const pages = Math.max(1, Math.ceil(hits.length / PER));
   const shown = hits.slice((page - 1) * PER, page * PER);
@@ -41,7 +50,7 @@ export default function Library() {
     <div className="page">
       <div className="eyebrow">The Library</div>
       <h1 className="display">The Open Library</h1>
-      <p className="lede">{cat ? cat.length.toLocaleString() : '…'} complete public-domain books, every one hosted here in full and readable right now. Want something that isn't here? <a href="/add">Request it</a>.</p>
+      <p className="lede">{cat ? cat.length.toLocaleString() : '…'} complete public-domain books, every one hosted here in full and readable right now. Want something that isn't here? <Link to="/add">Request it</Link>.</p>
       <form className="searchbar glass" role="search" onSubmit={e => { e.preventDefault(); go({ q: input.trim() }); }}>
         <input value={input} onChange={e => setInput(e.target.value)} placeholder="Search titles, authors or subjects: Tolstoy, whales, detective…" aria-label="Search the library" />
         <select value={lang} onChange={e => go({ lang: e.target.value })} aria-label="Language">
@@ -59,7 +68,8 @@ export default function Library() {
       </div>
       <div className="status small muted" aria-live="polite">{!cat ? <span><span className="spin" /> Opening the catalogue…</span> : <span>{hits.length.toLocaleString()} book{hits.length === 1 ? '' : 's'}{q && <> for “{q}”</>}{lang && <> in {langName(lang)}</>}{shelf && <> on {shelf}</>}{subj && <> about {subj}</>} · all complete, all free</span>}</div>
       <div className="grid-books">{shown.map(c => <BookCard key={c.id} b={toBook(c)} />)}</div>
-      {cat && !hits.length && <p className="muted">Nothing matches yet. <a href="/add">Ask for this book</a>.</p>}
+      {suggestion && <p className="lede" role="status">Did you mean <button className="link" onClick={() => { setInput(suggestion); go({ q: suggestion }); }}><b>{suggestion}</b></button>?</p>}
+      {cat && !hits.length && <p className="muted">Nothing matches yet. <Link to="/add">Ask for this book</Link>.</p>}
       {pages > 1 && <div className="row gap center pager">
         <button className="btn ghost" disabled={page <= 1} onClick={() => { go({ page: String(page - 1) }); window.scrollTo(0, 0); }}>← Previous</button>
         <span className="muted">Page {page} of {pages}</span>

@@ -166,7 +166,7 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
           {id > 0 && <Link to={`/dna?id=${id}`} className="rb-link" title="Statistics and story map measured from this text">DNA</Link>}
-          <button onClick={() => speak()} className={`rb-listen ${speaking ? "on" : ""}`} title="Narrate this chapter aloud">{speaking ? '■ Stop' : '▶ Listen'}</button>
+          <button onClick={() => speak()} className={`rb-listen ${speaking ? "on" : ""}`} title="Narrate this chapter aloud" aria-label={speaking ? (tts.phase === 'loading' && kVoice ? `Stop narration (natural voice loading, ${tts.pct}%)` : 'Stop narration') : 'Listen: narrate this chapter aloud'}>{speaking ? (tts.phase === 'loading' && kVoice ? `■ Voice ${tts.pct}%` : '■ Stop') : '▶ Listen'}</button>
           <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
           <button onClick={() => { setEditing(!editing); if (editing && panel === 'design') setPanel('none'); }} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
           {editing && <button onClick={() => setPanel(panel === 'design' ? 'none' : 'design')} className={panel === 'design' ? 'on' : ''}>Design</button>}
