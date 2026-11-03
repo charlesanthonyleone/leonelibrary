@@ -366,4 +366,7 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
   .footer a{display:inline-flex;align-items:center;min-height:44px}
   input[type=range]{min-height:44px}
   .bc-title,.muted.small a{display:inline-flex;align-items:center;min-height:32px}
+  .book3d{min-width:24px}
+  .dna-bars{overflow-x:auto;scroll-snap-type:x proximity}
+  .dna-bars a{min-width:24px;min-height:24px;flex:none}
 }
