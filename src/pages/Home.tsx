@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import Room from '../components/Room';
 import { fromPreset } from '../lib/room';
 import { STARTER } from '../lib/shared';
+import { HomeShelves } from './Browse';
 const Contest = lazy(() => import('./Features').then(m => ({ default: m.Contest })));
 
 const ROOMS = [
@@ -28,6 +29,7 @@ export default function Home() {
       </section>
 
       <ContinueReading />
+      <HomeShelves />
       <FirstLine />
       <section className="section index-sec">
         <div className="eyebrow">Inside</div>

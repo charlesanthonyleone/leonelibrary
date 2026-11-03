@@ -19,6 +19,11 @@ const Design = lazy(() => import('./pages/Design'));
 const Shelf = lazy(() => import('./pages/Shelf'));
 const Plans = lazy(() => import('./pages/Plans'));
 const Search = lazy(() => import('./pages/Search'));
+const AuthorPage = lazy(() => import('./pages/Browse').then(m => ({ default: m.AuthorPage })));
+const AuthorsPage = lazy(() => import('./pages/Browse').then(m => ({ default: m.AuthorsPage })));
+const SubjectsPage = lazy(() => import('./pages/Browse').then(m => ({ default: m.SubjectsPage })));
+const SubjectPage = lazy(() => import('./pages/Browse').then(m => ({ default: m.SubjectPage })));
+const GenrePage = lazy(() => import('./pages/Browse').then(m => ({ default: m.GenrePage })));
 const Paths = lazy(() => import('./pages/Paths'));
 const Dna = lazy(() => import('./pages/Dna'));
 const Account = lazy(() => import('./pages/Account'));
@@ -85,6 +90,11 @@ function App() {
           <Route path="/rights" element={<Rights />} />
           <Route path="/add" element={<Add />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/author" element={<AuthorPage />} />
+          <Route path="/authors" element={<AuthorsPage />} />
+          <Route path="/subjects" element={<SubjectsPage />} />
+          <Route path="/subject" element={<SubjectPage />} />
+          <Route path="/genre" element={<GenrePage />} />
           <Route path="/paths" element={<Paths />} />
           <Route path="/dna" element={<Dna />} />
           <Route path="/offline" element={<Offline />} />
