@@ -34,6 +34,7 @@ export default function Shelf() {
   const shared = useMemo(() => { const m = loc.hash.match(/room=([^&]+)/); return m ? decodeLayout(m[1]) : null; }, [loc.hash]);
   const view = shared ?? L;
   const [tab, setTab] = useState<Tab>('room'); const [mode, setMode] = useState<'view' | 'books' | 'decor'>('view'); const [tool, setTool] = useState<'translate' | 'rotate' | 'scale'>('translate');
+  const [power, setPower] = useStored<'auto' | 'low' | 'full'>('room-power', 'auto'); const [engineKey, setEngineKey] = useState(0);
   const [sel, setSel] = useState<Pick>(null); const [upsell, setUpsell] = useState<string | null>(null); const [toast, setToast] = useState(''); const [draft, setDraft] = useState({ css: L.css, html: L.html });
   const [gl] = useState(hasWebGL); const lib = useRef<Lib3DHandle>(null);
   useEffect(() => { setDraft({ css: L.css, html: L.html }); setSel(null); }, [L.id]);
@@ -121,7 +122,7 @@ export default function Shelf() {
         <div className="room-col">
           <div id="lib-room" ref={roomRef} className={`lib-room ${fs ? 'pseudo-fs' : ''} ${reading ? 'reading' : ''}`}>
             {gl ? <Suspense fallback={<div className="lib3d"><div className="lib3d-load"><span />Lighting the room…</div></div>}>
-              <Library3D ref={lib} layout={view} mode={shared ? 'view' : mode} tool={tool} editable={!shared}
+              <Library3D key={engineKey} ref={lib} layout={view} mode={shared ? 'view' : mode} tool={tool} editable={!shared}
                 onBooks={b => (pro || true) && patch({ books: b, preset: L.preset })} onItem={(it, f) => setItem(it, !f)} onSelect={p => { if (mode === 'view' && p?.type === 'book') return; setSel(p); if (p?.type === 'book') setTab('books'); if (p?.type === 'item') setTab('decor'); }}
                 onCam={c => !reading && !shared && R.set({ ...L, cam: c }, true)} onOpen={openBook} onRead={setRs} />
             </Suspense> : <Room cfg={fromPreset(view.setting === 'outdoor' ? (view.view === 'snow' ? 'snow' : 'meadow') : 'study')} books={view.books} />}
@@ -146,7 +147,7 @@ export default function Shelf() {
 
           {tab === 'room' && <div className="ctls">
             <div className="lbl">Start from a room</div>
-            <div className="presets3d">{PRESETS3D.map(p => { const locked = !p.free && !pro;
+            <div className="presets3d">{[...PRESETS3D].sort((a, b) => window.innerWidth < 640 ? Number(!!b.phone) - Number(!!a.phone) : Number(!!a.phone) - Number(!!b.phone)).map(p => { const locked = !p.free && !pro;
               return <button key={p.id} className={`p3 ${L.preset === p.id ? 'on' : ''}`} onClick={() => (locked ? setUpsell(p.name) : R.set({ ...L, ...p.make(), books: respread(L.books, p.make().shelves), id: L.id, name: L.name }))}>
                 <span className={`p3-sw p3-${p.id}`} /><b>{p.name} {locked && <Lock />}</b><small>{p.blurb}</small></button>; })}</div>
             <Chips label="Setting" opts={[['room', 'Indoors'], ['outdoor', 'Outdoors']]} val={L.setting} on={v => patch({ setting: v, floor: v === 'outdoor' ? (L.view === 'snow' ? 'snow' : 'grass') : 'oak' })} />
@@ -209,6 +210,8 @@ export default function Shelf() {
             <Slider label="Exposure" min={.4} max={2} step={.05} val={L.exposure} fmt={v => v.toFixed(2)} on={v => patch({ exposure: v }, true)} />
             <Chips label="Weather & effects" opts={WEATHERS} val={L.weather} on={v => patch({ weather: v })} />
             <Chips free label="Ambient sound" opts={[['on', 'On'], ['off', 'Off']]} val={L.sound ? 'on' : 'off'} on={v => patch({ sound: v === 'on', preset: L.preset })} />
+            <Chips free label="Graphics" opts={[['auto', 'Auto'], ['low', 'Low power'], ['full', 'Full']]} val={power} on={v => { setPower(v as typeof power); setEngineKey(k => k + 1); }} />
+            <p className="small muted">Low power renders at a lower resolution and 30 fps, with no soft shadows or particles. Auto picks it on phones, with Save-Data on, or on low-memory devices.</p>
             <p className="tiny muted">Sound is synthesised live in your browser (falls, rain, wind, crickets, a crackling room). No audio is downloaded.</p>
           </div>}
 

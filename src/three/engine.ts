@@ -23,7 +23,14 @@ export type EngineEvents = {
   onOpen?: (id: string) => void; onRead?: (s: ReadState | null) => void;
 };
 
+/** Low-power mode: lower resolution, no soft shadows, no particles, 30 fps. 'auto' turns it on for phones, Save-Data and low-memory devices. */
+export function lowPower(): boolean {
+  let pref = 'auto'; try { pref = JSON.parse(localStorage.getItem('leone:room-power') ?? '"auto"'); } catch { /* default */ }
+  if (pref === 'low') return true; if (pref === 'full') return false;
+  const n = navigator as any; return !!(n.connection?.saveData || (n.deviceMemory && n.deviceMemory <= 4) || (matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600));
+}
 export class Engine {
+  low = lowPower(); last = 0;
   r: THREE.WebGLRenderer; scene = new THREE.Scene(); cam: THREE.PerspectiveCamera; orbit: OrbitControls; tc: TransformControls;
   L!: Layout; ev: EngineEvents; mode: 'view' | 'books' | 'decor' = 'view'; editable = true;
   world = new THREE.Group(); caseG = new THREE.Group(); booksG = new THREE.Group(); itemsG = new THREE.Group(); fx = new THREE.Group(); lights = new THREE.Group();
@@ -36,9 +43,9 @@ export class Engine {
 
   constructor(public host: HTMLElement, ev: EngineEvents) {
     this.ev = ev;
-    const r = this.r = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
-    r.setPixelRatio(Math.min(devicePixelRatio, 1.75)); r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
-    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    const r = this.r = new THREE.WebGLRenderer({ antialias: !this.low, powerPreference: this.low ? 'low-power' : 'high-performance', preserveDrawingBuffer: true });
+    r.setPixelRatio(this.pr(1.75)); r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+    r.shadowMap.enabled = !this.low; r.shadowMap.type = THREE.PCFSoftShadowMap;
     host.appendChild(r.domElement); r.domElement.className = 'lib3d-canvas';
     this.cam = new THREE.PerspectiveCamera(38, 1, .05, 400);
     this.orbit = new OrbitControls(this.cam, r.domElement); this.orbit.enableDamping = true; this.orbit.minDistance = 1.1; this.orbit.maxDistance = 7;
@@ -48,7 +55,7 @@ export class Engine {
     this.tc.addEventListener('dragging-changed', (e: any) => { this.orbit.enabled = !e.value; if (!e.value) this.commitItem(true); });
     this.tc.addEventListener('objectChange', () => this.commitItem(false));
     this.scene.add(this.tc.getHelper());
-    this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.bias = -.0004; this.sun.shadow.normalBias = .02;
+    this.sun.castShadow = true; this.sun.shadow.mapSize.set(this.low ? 1024 : 2048, this.low ? 1024 : 2048); this.sun.shadow.bias = -.0004; this.sun.shadow.normalBias = .02;
     Object.assign(this.sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -2, near: .5, far: 40 }); this.sun.shadow.radius = 4;
     this.scene.add(this.world, this.caseG, this.booksG, this.itemsG, this.fx, this.lights, this.sun, this.sun.target, this.hemi, this.selBox);
     this.selBox.visible = false;
@@ -59,13 +66,16 @@ export class Engine {
     this.io = new IntersectionObserver(es => { this.visible = es[0].isIntersecting; }); this.io.observe(host);
     this.resize(); this.loop();
   }
+  pr(max: number) { return this.low ? Math.min(devicePixelRatio, 1) : Math.min(devicePixelRatio, max); }
   dispose() { cancelAnimationFrame(this.raf); this.ro.disconnect(); this.io.disconnect(); window.removeEventListener('pointerup', this.up); this.tc.dispose(); this.orbit.dispose(); this.r.dispose(); this.r.domElement.remove(); }
   resize() { const w = this.host.clientWidth, h = this.host.clientHeight; if (!w || !h) return; this.r.setSize(w, h, false); this.cam.aspect = w / h; this.cam.updateProjectionMatrix(); }
   loop = () => {
     this.raf = requestAnimationFrame(this.loop);
     if (!this.visible || document.hidden) return;
+    if (this.low) { const now = performance.now(); if (now - this.last < 32) return; this.last = now; }
     const dt = Math.min(this.clock.getDelta(), .05), t = this.clock.elapsedTime;
-    for (const u of [...this.worldUpd, ...this.itemUpd, ...this.fxUpd]) u(t, dt);
+    for (const u of this.low ? [...this.worldUpd, ...this.itemUpd] : [...this.worldUpd, ...this.itemUpd, ...this.fxUpd]) u(t, dt);
+    this.fx.visible = !this.low;
     if (this.reading) this.reading.update(dt, t); else this.orbit.update();
     if (this.selBox.visible) this.selBox.update();
     this.r.render(this.scene, this.cam);
@@ -549,10 +559,10 @@ export class Engine {
     const mesh = this.booksG.children.find(c => c.userData.book === id), slot = this.L.books.find(b => String(b.id) === id); if (!mesh || !slot) return null;
     this.select(null); this.selBox.visible = false;
     this.reading = new Reading(this, mesh, { title: slot.title, author: slot.author, color: slot.color }, look, s => this.ev.onRead?.(s));
-    this.r.setPixelRatio(Math.min(devicePixelRatio, 2)); this.resize();
+    this.r.setPixelRatio(this.pr(2)); this.resize();
     return this.reading;
   }
-  closeBook(done?: () => void) { const R = this.reading; if (!R) return; R.close(() => { this.reading = null; this.r.setPixelRatio(Math.min(devicePixelRatio, 1.75)); this.resize(); this.r.domElement.style.cursor = ''; done?.(); }); }
+  closeBook(done?: () => void) { const R = this.reading; if (!R) return; R.close(() => { this.reading = null; this.r.setPixelRatio(this.pr(1.75)); this.resize(); this.r.domElement.style.cursor = ''; done?.(); }); }
   down = (e: PointerEvent) => {
     if (this.reading) { this.reading.down(e); return; }
     if (this.mode === 'view' && this.ev.onOpen) { const h = this.pickAt(e); if (h?.object.userData.book) this.click = { x: e.clientX, y: e.clientY, id: h.object.userData.book }; }

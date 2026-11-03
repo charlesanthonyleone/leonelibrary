@@ -92,9 +92,14 @@ export default function Reader() {
     setTurn(dir > 0 ? 'fwd' : 'back'); setPage(np); setTimeout(() => setTurn(''), 450);
   };
   useEffect(() => { const k = (e: KeyboardEvent) => { if (editing || (e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable]')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === ' ' && (e.target as HTMLElement)?.closest('button,a,summary,[role=button]')) return;
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); flip(e.shiftKey && e.key === ' ' ? -1 : 1); }
       else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); flip(-1); }
-      else if (e.key === 'Escape') setPanel('none');
+      else if (e.key === 'Escape') { setPanel('none'); setKeys(false); }
+      else if (e.key === 'l' || e.key === 'L') speak(speaking ? 0 : Math.max(0, paged ? firstVisible() : para));
+      else if (e.key === 'b' || e.key === 'B') addMark();
+      else if (e.key === 't' || e.key === 'T') setPanel(p => p === 'toc' ? 'none' : 'toc');
       else if (e.key === '/' ) { e.preventDefault(); setPanel('find'); }
       else if (e.key === '?') setKeys(k => !k); };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); });
@@ -212,7 +217,7 @@ export default function Reader() {
         {paged && <button className="tap prev" aria-label="Previous page" onClick={() => flip(-1)} />}
         {ax.ruler && <Ruler />}
         {keys && <div className="keys-help glass" role="dialog" aria-label="Keyboard shortcuts"><h2 className="h3">Keyboard shortcuts</h2>
-          <dl>{[['→ / Space / Page Down', 'Next page'], ['← / Shift+Space / Page Up', 'Previous page'], ['/', 'Find in this book'], ['Esc', 'Close panel'], ['?', 'Show or hide this help']].map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}</dl>
+          <dl>{[['→ / Space / Page Down', 'Next page'], ['← / Shift+Space / Page Up', 'Previous page'], ['/', 'Find in this book'], ['L', 'Listen / stop narration'], ['B', 'Bookmark this page'], ['T', 'Contents'], ['Esc', 'Close panel'], ['?', 'Show or hide this help']].map(([k, v]) => <div key={k}><dt><kbd>{k}</kbd></dt><dd>{v}</dd></div>)}</dl>
           <button className="btn ghost sm" onClick={() => setKeys(false)}>Close</button></div>}
         <article id="reader-text" className={`page-paper ${turn && motion !== 'none' ? `turn-${motion}-${turn}` : ''}`} lang={book?.languages[0]}>
           {!chapters && <p className="loading"><span className="spin" /> Opening the book…</p>}
@@ -220,7 +225,7 @@ export default function Reader() {
             onPointerDown={e => { swipe.current = { x: e.clientX, y: e.clientY, t: Date.now() }; }}
             onPointerUp={e => { const s = swipe.current; swipe.current = null; if (!s || !paged) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - s.y) && Date.now() - s.t < 700 && !window.getSelection()?.toString()) flip(dx < 0 ? 1 : -1); }}>
             <div className="pg-flow" ref={flowRef} style={paged ? { transform: `translateX(calc(${-page} * (100% + var(--r-gap))))` } : undefined}>
-              {ch === 0 && book && <header className="title-page"><div className="tp-orn">❦</div><h1>{book.title.split(/[;:]/)[0]}</h1><p>{author(book)}</p><RightsTag r={rightsFor(book)} /></header>}
+              {ch === 0 && book && <header className="title-page"><div className="tp-orn">❦</div><p className="tp-h1" aria-hidden="true">{book.title.split(/[;:]/)[0]}</p><p>{author(book)}</p><RightsTag r={rightsFor(book)} /></header>}
               <h2 className="ch-title">{chapter.title}</h2>
               {editing && <p className="edit-hint">Editing: changes are saved on this device and recorded in the book's change log.</p>}
               <div className="prose">

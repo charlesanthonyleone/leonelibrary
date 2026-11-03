@@ -174,7 +174,7 @@ select option { background: #0b1020; }
 .ch-title { font-family: var(--r-font); text-align: center; font-weight: 500; font-size: calc(var(--r-size) * 1.45); color: var(--r-acc); margin: 0 0 1.6em; letter-spacing: .04em; }
 .reader.orn .ch-title::after { content: '❦'; display: block; font-size: .7em; margin-top: .5em; opacity: .8; }
 .title-page { text-align: center; margin: 10px 0 70px; font-family: var(--r-font); }
-.title-page h1 { font-weight: 500; font-size: calc(var(--r-size) * 2.4); line-height: 1.05; margin: 10px 0; color: var(--r-ink); } .title-page p { font-size: calc(var(--r-size) * 1.05); opacity: .8; letter-spacing: .12em; text-transform: uppercase; }
+.title-page .tp-h1 { text-transform: none; letter-spacing: 0; opacity: 1; font-family: var(--serif, inherit); font-weight: 500; font-size: calc(var(--r-size) * 2.4); line-height: 1.05; margin: 10px 0; color: var(--r-ink); } .title-page p { font-size: calc(var(--r-size) * 1.05); opacity: .8; letter-spacing: .12em; text-transform: uppercase; }
 .tp-orn { color: var(--r-acc); font-size: 34px; }
 .prose mark { background: color-mix(in srgb, var(--r-acc) 32%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; } .prose mark.has-note { border-bottom: 2px solid var(--r-acc); }
 .editable { outline: 1px dashed color-mix(in srgb, var(--r-acc) 40%, transparent); outline-offset: 4px; border-radius: 2px; } .editable:focus { outline-style: solid; }
