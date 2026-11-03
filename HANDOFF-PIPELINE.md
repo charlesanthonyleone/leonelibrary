@@ -31,3 +31,5 @@ Known: 28696 Symbolic Logic is 53k words vs 66k before; checked — extraction n
   and `--catalog` = main's catalog + my new entries. My ids: /workspace/ll-gut-stage/g*-ids.txt, from /workspace/ll-cat-stage/beyond-candidates.json
   (select.py eligible), excluding the catalogue and the CAT worker's b1/b2 batches. HTML from PG mirror gutenberg.pglaf.org, 2 s apart.
 - Wikipedia/Wikidata: scripts/wiki/ (mine) -> public/data/authors.json, descriptions.json. UI: src/lib/wiki.tsx, author bio, book description.
+- Batch g1 (300 books, ids in /workspace/ll-gut-stage/built1.txt): built with scripts/pipeline unchanged (headings 257, html-patterns 28, text-patterns 15, 0 errors);
+  texts + covers (from /workspace/llimport/staged-6000/covers) uploaded to Contabo with --skip-old-files. audit-books.py on the 300: broken-title 4, encoding-garbage 3, tiny-chapter 5 (report /workspace/ll-gut-stage/audit1.json) — pipeline worker's call whether to rule-fix.
