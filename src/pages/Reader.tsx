@@ -37,7 +37,7 @@ export default function Reader() {
   const [editing, setEditing] = useState(false); const [card, setCard] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]); const [voice, setVoice] = useStored('voice', ''); const [rate, setRate] = useStored('voice-rate', 1); const [para, setPara] = useState(-1);
-  const nar = useRef<Narration | null>(null); const [tts, setTts] = useState(ttsState()); useEffect(() => onTtsState(setTts), []);
+  const nar = useRef<Narration | null>(null); const cont = useRef(false); const [sleep, setSleep] = useState(0); const sleepAt = useRef(0); const [tts, setTts] = useState(ttsState()); useEffect(() => onTtsState(setTts), []);
   const [page, setPage] = useState(0); const [pages, setPages] = useState(1); const [turn, setTurn] = useState<'' | 'fwd' | 'back'>('');
   const [vw, setVw] = useState(window.innerWidth);
   const viewRef = useRef<HTMLDivElement>(null); const flowRef = useRef<HTMLDivElement>(null);
@@ -112,17 +112,34 @@ export default function Reader() {
   const speakDevice = (from: number) => {
     const ss = window.speechSynthesis; if (!ss) { setSpeaking(false); return; }
     const v = voices.find(x => x.name === voice);
-    const next = (i: number) => { if (i >= paras.length) { setSpeaking(false); setPara(-1); return; }
+    const next = (i: number) => { if (i >= paras.length) { chapterDone(); return; }
       const u = new SpeechSynthesisUtterance(paras[i]); u.lang = v?.lang ?? lang0; if (v) u.voice = v; u.rate = rate;
       u.onstart = () => follow(i); u.onend = () => next(i + 1); u.onerror = () => { setSpeaking(false); setPara(-1); }; ss.speak(u); };
     next(from);
   };
+  /** At the end of a chapter, narration carries on into the next one unless the sleep timer says stop. */
+  const chapterDone = () => { setPara(-1);
+    if (sleep === -1 || (sleepAt.current && Date.now() >= sleepAt.current) || !chapters || ch >= chapters.length - 1) { setSpeaking(false); if (sleep) { setSleep(0); sleepAt.current = 0; } return; }
+    cont.current = true; goCh(ch + 1, 0); };
   const speak = (from = 0) => {
     if (speaking && from === 0) { window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(false); setPara(-1); return; }
+    start(from);
+  };
+  const start = (from: number) => {
     window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(true);
-    if (kVoice && neuralFor(lang0)) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onEnd: () => { setSpeaking(false); setPara(-1); }, onError: () => speakDevice(from) });
+    if (kVoice && neuralFor(lang0)) nar.current = narrate(paras, from, { voice: kVoice, speed: rate, onPara: follow, onEnd: chapterDone, onError: () => speakDevice(from) });
     else speakDevice(from);
   };
+  useEffect(() => { if (cont.current && chapter) { cont.current = false; start(0); } }, [chapter]);
+  useEffect(() => { if (!sleep || sleep < 0 || !speaking) return; sleepAt.current = Date.now() + sleep * 60000;
+    const t = setTimeout(() => { window.speechSynthesis?.cancel(); nar.current?.stop(); setSpeaking(false); setPara(-1); setSleep(0); sleepAt.current = 0; }, sleep * 60000); return () => clearTimeout(t); }, [sleep, speaking]);
+  // Lock-screen and headset controls while narrating.
+  useEffect(() => { const ms = (navigator as any).mediaSession; if (!ms || !book) return;
+    try { ms.metadata = new (window as any).MediaMetadata({ title: chapter?.title ?? book.title, artist: author(book), album: book.title.split(/[;:]/)[0] });
+      ms.playbackState = speaking ? 'playing' : 'paused';
+      ms.setActionHandler('play', () => !speaking && speak(Math.max(0, para))); ms.setActionHandler('pause', () => speaking && speak()); ms.setActionHandler('stop', () => speaking && speak());
+      ms.setActionHandler('nexttrack', () => chapters && ch < chapters.length - 1 && (cont.current = speaking, goCh(ch + 1)));
+      ms.setActionHandler('previoustrack', () => ch > 0 && (cont.current = speaking, goCh(ch - 1))); } catch { /* unsupported action */ } });
   const addMark = () => { const p = paged ? firstVisible() : 0; const label = (paras[p] ?? '').slice(0, 70); setMarks([...marks, { id: uid(), chapter: ch, para: p, label, at: Date.now() }]); };
   const shareNotes = () => { const who = prompt('Sign your notes as', '') ?? ''; const url = shareNotesLink(id, book?.title.split(/[;:]/)[0] ?? 'Notes', who, hl); navigator.clipboard?.writeText(url).catch(() => {}); prompt('Link copied. Anyone with it can read and import your notes:', url); };
 
@@ -149,7 +166,7 @@ export default function Reader() {
           <button onClick={() => setPanel(panel === 'marks' ? 'none' : 'marks')} className={panel === 'marks' ? 'on' : ''}>Bookmarks{marks.length ? ` (${marks.length})` : ''}</button>
           <button onClick={() => setPanel(panel === 'notes' ? 'none' : 'notes')} className={panel === 'notes' ? 'on' : ''}>Notes{hl.length ? ` (${hl.length})` : ''}</button>
           {id > 0 && <Link to={`/dna?id=${id}`} className="rb-link" title="Statistics and story map measured from this text">DNA</Link>}
-          <button onClick={() => speak()} className={speaking ? 'on' : ''} title="Narrate this chapter aloud">{speaking ? '■ Stop' : '▶ Listen'}</button>
+          <button onClick={() => speak()} className={`rb-listen ${speaking ? "on" : ""}`} title="Narrate this chapter aloud">{speaking ? '■ Stop' : '▶ Listen'}</button>
           <button onClick={() => setPanel(panel === 'voice' ? 'none' : 'voice')} className={panel === 'voice' ? 'on' : ''}>Voice</button>
           <button onClick={() => { setEditing(!editing); if (editing && panel === 'design') setPanel('none'); }} className={editing ? 'on' : ''}>{editing ? 'Done editing' : 'Edit'}</button>
           {editing && <button onClick={() => setPanel(panel === 'design' ? 'none' : 'design')} className={panel === 'design' ? 'on' : ''}>Design</button>}
@@ -182,7 +199,9 @@ export default function Reader() {
           {!neuralFor(lang0) && <p className="small muted">Natural voices are English-only, so this book uses your device's voice.</p>}
           {tts.phase === 'loading' && <p className="small" role="status">Loading natural voice… {tts.pct}%</p>}
           {tts.phase === 'failed' && <p className="small muted" role="status">The natural voice couldn't load on this device, so your device's voice is used.</p>}
-          <label className="lbl">Speed: {rate.toFixed(2)}×</label><input aria-label="Speed: ×" type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
+          <label className="lbl">Speed: {rate.toFixed(2)}×</label><input aria-label="Narration speed" type="range" min={.6} max={1.6} step={.05} value={rate} onChange={e => setRate(+e.target.value)} />
+          <label className="lbl" htmlFor="sleep-sel">Sleep timer</label><select id="sleep-sel" className="fx-in" value={sleep} onChange={e => { setSleep(+e.target.value); sleepAt.current = 0; }}>
+            <option value={0}>Off: keep reading chapter after chapter</option><option value={-1}>Stop at the end of this chapter</option>{[15, 30, 45, 60].map(m => <option key={m} value={m}>Stop after {m} minutes</option>)}</select>
           <button className="btn gold sm" onClick={() => speak(Math.max(0, paged ? firstVisible() : para))}>{speaking ? 'Restart from this page' : '▶ Start from this page'}</button></>}
       </aside>}
       <div className={`book-spread ${two ? 'two' : 'one'}`}>
