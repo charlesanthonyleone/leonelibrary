@@ -97,8 +97,9 @@ export function getHosted(id: number): Promise<HostedBook> {
   if (!bookCache.has(id)) {
     bookCache.set(id, (async () => {
       if (id < 0) { const b = await (await import('./private')).privateGet(id); if (!b) throw new Error('not-hosted'); return b; }
+      const rp = assetFetch(`books/${id}.json.gz`); rp.catch(() => {}); // fetch the text while the catalogue confirms it's hosted
       if (!(await isBundled(id))) throw new Error('not-hosted');
-      const r = await assetFetch(`books/${id}.json.gz`);
+      const r = await rp;
       if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
       const enc = r.headers.get('content-encoding');
       const txt = enc && enc.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();

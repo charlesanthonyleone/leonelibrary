@@ -97,6 +97,7 @@ function App() {
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {}));
 
+initAssets().finally(() => { const m = /^\/(read|book)\/?$/.test(location.pathname) && Number(new URLSearchParams(location.search).get('id')); if (m && m > 0) import('./lib/books').then(b => b.getHosted(m)).catch(() => {}); });
 initAssets().finally(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ErrorBoundary><BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><App /></BrowserRouter></ErrorBoundary></React.StrictMode>,
 ));

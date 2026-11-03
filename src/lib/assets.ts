@@ -2,7 +2,9 @@
 // the app shell stays on GitHub Pages. The address lives in data/assets.json so it can change without a rebuild.
 const BASE = import.meta.env.BASE_URL;
 export let ASSET = BASE;
-export async function initAssets() {
+let ready: Promise<void> | null = null;
+export function initAssets() { return ready ??= loadBase(); }
+async function loadBase() {
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);
     const c = await fetch(`${BASE}data/assets.json`, { cache: 'no-cache', signal: ctl.signal }).then(r => r.json()); clearTimeout(t);
