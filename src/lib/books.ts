@@ -7,6 +7,7 @@ export type Page = { count: number; next: string | null; results: Book[] };
 
 const BASE = import.meta.env.BASE_URL;
 import { assetFetch, assetUrl, localKey } from './assets';
+import { migrateSaved } from './chapters';
 /** Catalogue entry: only books whose complete text is hosted on Leone Library are listed. */
 export type CatEntry = { id: number; title: string; author: string; authors: Person[]; lang: string[]; subjects: string[]; shelves: string[]; downloads: number; cover: boolean; words: number; chapters: number };
 let catalog: Promise<CatEntry[]> | null = null;
@@ -55,7 +56,7 @@ export function rightsFor(b: Book): Rights {
   return { tag: 'Public domain worldwide', tone: 'ok', detail: `${last ? `Author died ${last}, more than 70 years ago (life+70 rule), ` : ''}and first published before 1931 (US rule). Listed only because both checks pass.` };
 }
 
-export type Chapter = { title: string; paras: string[] };
+export type Chapter = { title: string; paras: string[]; group?: string };
 /** Strip the Gutenberg licence wrapper and split into chapters. */
 export function parseText(raw: string): { front: string; chapters: Chapter[] } {
   let t = raw.replace(/\r\n/g, '\n');
@@ -90,7 +91,7 @@ export function parseText(raw: string): { front: string; chapters: Chapter[] } {
   return { front, chapters: real };
 }
 
-export type HostedBook = { id: number; title: string; author: string; lang: string; words: number; source: string; sha: string; chapters: { t: string; p: string[] }[] };
+export type HostedBook = { id: number; title: string; author: string; lang: string; words: number; source: string; sha: string; chapters: { t: string; p: string[]; g?: string }[]; v?: number; remap?: [number, number][] };
 const bookCache = new Map<number, Promise<HostedBook>>();
 /** Complete, cleaned text hosted on Leone Library (gzip JSON, decompressed in the browser). */
 export function getHosted(id: number): Promise<HostedBook> {
@@ -103,7 +104,7 @@ export function getHosted(id: number): Promise<HostedBook> {
       if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
       const enc = r.headers.get('content-encoding');
       const txt = enc && enc.includes('gzip') ? await r.text() : await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
-      return JSON.parse(txt) as HostedBook;
+      const b = JSON.parse(txt) as HostedBook; migrateSaved(b); return b;
     })());
     bookCache.get(id)!.catch(() => bookCache.delete(id));
   }
@@ -115,7 +116,7 @@ export async function getHostedRaw(id: number): Promise<string> {
   const enc = r.headers.get('content-encoding'); return enc && enc.includes('gzip') ? r.text() : new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text();
 }
 export async function getChapters(id: number): Promise<Chapter[]> {
-  return (await getHosted(id)).chapters.map(c => ({ title: c.t, paras: c.p }));
+  return (await getHosted(id)).chapters.map(c => ({ title: c.t, paras: c.p, group: c.g }));
 }
 /** Plain text of the whole book (title + chapters), for tools that want a string. */
 export async function getText(id: number): Promise<string> {
