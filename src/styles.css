@@ -400,3 +400,6 @@ body.no-motion *, body.no-motion *::before, body.no-motion *::after { animation:
 .pl-ctl .pl-main { background: var(--gold-2, #d8b46a); color: #111; font-weight: 700; }
 .pl-ctl button:focus-visible { outline: 2px solid var(--gold-2, #d8b46a); outline-offset: 2px; }
 @media (max-width: 520px) { .pl-info { display: none; } .player { width: auto; } }
+@media (min-width: 701px) { .reader.listening .pg-foot { visibility: hidden; } .reader.listening .player { bottom: 6px; } }
+.define { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); bottom: 90px; width: min(440px, calc(100vw - 20px)); max-height: 55vh; overflow: auto; padding: 16px 18px; border-radius: 14px; }
+.define .h3 { margin: 0; } .define .def-pos { margin: 10px 0 2px; font-style: italic; color: var(--gold-2, #d8b46a); } .define ol { margin: 0; padding-left: 20px; line-height: 1.5; }

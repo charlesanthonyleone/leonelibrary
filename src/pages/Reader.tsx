@@ -28,7 +28,7 @@ export default function Reader() {
   const [book, setBook] = useState<Book | null>(null);
   const [chapters, setChapters] = useState<Chapter[] | null>(null);
   const [err, setErr] = useState('');
-  const [d, setD] = useDesign(); const [say, setSay] = useState<[number, number, number] | null>(null); const [paused, setPaused] = useState(false); const swiped = useRef(false);
+  const [d, setD] = useDesign(); const [say, setSay] = useState<[number, number, number] | null>(null); const [paused, setPaused] = useState(false); const swiped = useRef(false); const [def, setDef] = useState<string | null>(null);
   const [a, setA] = useStored<A11y>('a11y', A11Y0); const ax = { ...A11Y0, ...a };
   const [prog, setProg] = useStored<Progress & { para?: number; book?: number }>(`progress:${id}`, { chapter: 0, pct: 0, at: 0 });
   const [hl, setHl] = useStored<Highlight[]>(`highlights:${id}`, []);
@@ -114,6 +114,10 @@ export default function Reader() {
     if (!t || t.length > 600 || editing || !s?.rangeCount) return setSel(null);
     const r = s.getRangeAt(0).getBoundingClientRect(); setSel({ text: t, x: Math.min(window.innerWidth - 120, Math.max(120, r.left + r.width / 2)), y: Math.max(60, r.top) });
   };
+  // Touch screens select text without a mouseup: watch the selection instead.
+  useEffect(() => { if (!matchMedia('(pointer: coarse)').matches) return; let t = 0;
+    const h = () => { clearTimeout(t); t = window.setTimeout(() => { const n = window.getSelection()?.anchorNode; if (n && flowRef.current?.contains(n)) onUp(); }, 450); };
+    document.addEventListener('selectionchange', h); return () => { document.removeEventListener('selectionchange', h); clearTimeout(t); }; });
   const addHl = (note?: string) => { if (!sel) return; setHl([...hl, { id: uid(), chapter: ch, text: sel.text, note, at: Date.now() }]); track('library.bookmark'); setSel(null); window.getSelection()?.removeAllRanges(); };
   const follow = (i: number) => { setPara(i); const el = flowRef.current?.querySelector<HTMLElement>(`[data-p="${i}"]`); const vv = viewRef.current;
     if (el && vv && paged) setPage(Math.floor(el.offsetLeft / (vv.clientWidth + gap(two)))); else el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
@@ -173,7 +177,7 @@ export default function Reader() {
   const pct = chapters ? ((ch + (pages > 1 ? page / (pages - 1) : 0)) / chapters.length) * 100 : 0;
   const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'none' : ax.motion;
   return (
-    <div className={`reader paged ${d.dropcap ? 'dropcap' : ''} ${d.indent ? 'indent' : ''} ${d.ornament ? 'orn' : ''} ${ax.contrast ? 'hc' : ''} ${paged ? '' : 'flow'}`} style={style} onMouseUp={onUp}>
+    <div className={`reader paged ${d.dropcap ? 'dropcap' : ''} ${d.indent ? 'indent' : ''} ${d.ornament ? 'orn' : ''} ${ax.contrast ? 'hc' : ''} ${paged ? '' : 'flow'} ${speaking ? 'listening' : ''}`} style={style} onMouseUp={onUp}>
       <a href="#reader-text" className="skip">Skip to text</a><h1 className="sr-only">{book?.title ?? 'Reader'}</h1>
       <div className="reader-bar glass" role="toolbar" aria-label="Reader tools">
         <Link to={`/book?id=${id}`} className="rb-title">← {book ? book.title.split(/[;:]/)[0] : '…'}</Link>
@@ -257,16 +261,18 @@ export default function Reader() {
         {paged && <button className="tap next" aria-label="Next page" onClick={() => flip(1)} />}
       </div>
       {speaking && <div className="player glass" role="region" aria-label="Narration player">
-        <div className="pl-info"><span className="pl-ch">{chapter?.title.slice(0, 40)}</span><span className="muted small">{tts.phase === 'loading' && kVoice ? `Loading natural voice ${tts.pct}%` : paused ? 'Paused' : `Reading · ${rate}×`}</span></div>
+        <div className="pl-info"><span className="pl-ch">{chapter?.title.slice(0, 40)}</span><span className="muted small">{tts.phase === 'loading' && kVoice ? `Loading natural voice ${tts.pct}%` : paused ? `Paused · ${Math.round(pct)}%` : `Reading · ${rate}× · ${Math.round(pct)}%`}</span></div>
         <div className="pl-ctl"><button onClick={() => skip(-1)} aria-label="Previous sentence">⏮</button>
           <button className="pl-main" onClick={togglePause} aria-label={paused ? 'Resume narration' : 'Pause narration'}>{paused ? '▶' : '❚❚'}</button>
           <button onClick={() => skip(1)} aria-label="Next sentence">⏭</button>
           <button onClick={() => setRate(rate >= 2 ? 0.75 : Math.round((rate + 0.25) * 100) / 100)} aria-label={`Speed ${rate} times, change`}>{rate}×</button>
           <button onClick={stopAll} aria-label="Stop narration">✕</button></div></div>}
       {chapter && <div className="pg-foot" aria-live="polite"><span className="muted small">{chapter.title.slice(0, 48)}</span><span className="muted small">{pageNo}{pageNo && ' · '}Chapter {ch + 1} of {chapters!.length} · {Math.round(pct)}%</span></div>}
+      {def && <Define word={def} onClose={() => setDef(null)} />}
       {card && <QuoteCard text={card} by={book ? author(book) : ''} title={book?.title.split(/[;:]/)[0] ?? ''} onClose={() => setCard(null)} />}
       {sel && <div className="sel-pop glass" style={{ left: sel.x, top: sel.y - 52, position: 'fixed' }} onMouseUp={e => e.stopPropagation()}>
         <button onClick={() => addHl()}>Highlight</button>
+        {/^[\p{L}'’-]{2,30}$/u.test(sel.text.trim()) && <button onClick={() => { setDef(sel.text.trim()); setSel(null); }}>Define</button>}
         <button onClick={() => { const n = prompt('Note for this passage'); if (n) addHl(n); }}>Add note</button>
         <button onClick={() => { navigator.clipboard?.writeText(`“${sel.text}” — ${book ? author(book) : ''}, ${book?.title.split(/[;:]/)[0] ?? ''}`); setSel(null); }}>Copy quote</button>
         <button onClick={() => { setCard(sel.text); setSel(null); }}>Quote card</button>
@@ -294,4 +300,25 @@ function Ruler() {
   const [y, setY] = useState(-100);
   useEffect(() => { const m = (e: PointerEvent) => setY(e.clientY); window.addEventListener('pointermove', m); return () => window.removeEventListener('pointermove', m); }, []);
   return <div className="read-ruler" aria-hidden="true" style={{ top: y - 22 }} />;
+}
+
+type Sense = { pos: string; defs: string[] };
+const strip = (h: string) => new DOMParser().parseFromString(h, 'text/html').body.textContent?.trim() ?? '';
+/** Free dictionary lookup from Wiktionary (CC BY-SA), shown with attribution. */
+function Define({ word, onClose }: { word: string; onClose: () => void }) {
+  const [r, setR] = useState<Sense[] | null | 'none'>(null);
+  useEffect(() => { let live = true; const w = word.replace(/[’']s$/, '');
+    const get = (x: string) => fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(x)}`).then(res => res.ok ? res.json() : null);
+    get(w).then(j => j?.en ? j : w !== w.toLowerCase() ? get(w.toLowerCase()) : j).then(j => { if (!live) return;
+      const out: Sense[] = (j?.en ?? []).slice(0, 3).map((e: { partOfSpeech: string; definitions: { definition: string }[] }) => ({ pos: e.partOfSpeech, defs: e.definitions.map(d => strip(d.definition)).filter(Boolean).slice(0, 3) })).filter((x: Sense) => x.defs.length);
+      setR(out.length ? out : 'none'); }).catch(() => live && setR('none'));
+    return () => { live = false; }; }, [word]);
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
+  return <div className="define glass" role="dialog" aria-label={`Definition of ${word}`}>
+    <div className="row between"><h2 className="h3">{word}</h2><button className="btn ghost sm" onClick={onClose} autoFocus aria-label="Close definition">✕</button></div>
+    {r === null && <p className="muted small" role="status">Looking it up…</p>}
+    {r === 'none' && <p className="muted small" role="status">No dictionary entry found for this word.</p>}
+    {Array.isArray(r) && r.map((x, i) => <div key={i}><p className="def-pos">{x.pos}</p><ol>{x.defs.map((d, j) => <li key={j}>{d}</li>)}</ol></div>)}
+    <p className="small muted">From <a href={`https://en.wiktionary.org/wiki/${encodeURIComponent(word)}`} target="_blank" rel="noopener">Wiktionary</a>, CC BY-SA.</p>
+  </div>;
 }
