@@ -24,11 +24,11 @@ export function mapPos(b: HostedV2, ch: number, para = 0): [number, number] {
   return [c, Math.max(0, Math.min(p, b.chapters[c].p.length - 1))];
 }
 
-/** One-time move of this device's saved progress, bookmarks, highlights and 3D-shelf anchor onto the v2 split.
+/** One-time move of this device's saved progress, bookmarks, highlights and 3D-shelf anchor onto the current split (v2, v3 … each remap maps from the previous version).
  *  Runs before the reader gets the chapters; idempotent (marker `chv:<id>`). */
 export function migrateSaved(b: HostedV2) {
-  if (b.v !== 2 || !b.remap || b.id < 0) return;
-  const mk = `chv:${b.id}`; if (load<number>(mk, 0) >= 2) return;
+  const v = b.v ?? 1; if (v < 2 || !b.remap || b.id < 0) return;
+  const mk = `chv:${b.id}`; if (load<number>(mk, 0) >= v) return;
   const has = (k: string) => { try { return localStorage.getItem('leone:' + k) != null; } catch { return false; } };
   if (has(`progress:${b.id}`)) {
     const pr = load<{ chapter: number; para?: number; [k: string]: unknown }>(`progress:${b.id}`, { chapter: 0 });
@@ -47,7 +47,7 @@ export function migrateSaved(b: HostedV2) {
     const a = load<{ ch: number; [k: string]: unknown }>(`bookmark:${b.id}`, { ch: 0 });
     if (typeof a.ch === 'number' && a.ch >= 0) save(`bookmark:${b.id}`, { ...a, ch: mapPos(b, a.ch)[0] });
   }
-  save(mk, 2);
+  save(mk, v);
 }
 function findLabel(b: HostedV2, s?: string): [number, number] | null {
   if (!s || s.length < 12) return null; const k = s.slice(0, 60);

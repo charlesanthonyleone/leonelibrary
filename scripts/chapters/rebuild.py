@@ -5,17 +5,19 @@ import json,gzip,os,sys,re,concurrent.futures as cf
 sys.path.insert(0,'/workspace/llimport'); sys.path.insert(0,os.path.dirname(__file__))
 from imp import clean
 from chap2 import chapterize,words
-SRC=sys.argv[1]; OUT=sys.argv[2]; RAW='/workspace/llimport/raw'
+from scripture import is_scripture,chapterize_scripture
+SRC=sys.argv[1]; OUT=sys.argv[2]; ONLY={int(x) for x in sys.argv[3].split(',')} if len(sys.argv)>3 else set()  # ONLY: re-split already-v2 books (v bumps, remap from previous version); RAW='/workspace/llimport/raw'
 os.makedirs(OUT,exist_ok=True)
 def one(f):
     old=json.load(gzip.open(f'{SRC}/{f}','rt')); i=old['id']
-    if old.get('v')==2: return i,'already',None
+    if ONLY and i not in ONLY: return i,'skip',None
+    if old.get('v') and not ONLY: return i,'already',None
     # rebuild the exact block stream the old splitter consumed: headings + paragraphs, in order
     blocks=[]
     for c in old['chapters']:
         if c['t']!='Opening' and not re.fullmatch(r'Part \d+',c['t']): blocks.append(c['t'])
         blocks+=c['p']
-    chs=chapterize(blocks)
+    chs=chapterize_scripture(blocks) if is_scripture(blocks) else chapterize(blocks)
     # text check: paragraphs+titles must account for all blocks (titles are normalised so count, not compare)
     np_=sum(len(c['p']) for c in chs); nt=len(chs)+len({c.get('g') for c in chs if c.get('g')})
     wb=sum(len(b.split()) for b in blocks); wo=sum(sum(len(p.split()) for p in c['p'])+len(c['t'].split()) for c in chs)+sum(len(g.split()) for g in {c.get('g') for c in chs if c.get('g')})
@@ -23,12 +25,12 @@ def one(f):
     # remap old chapter starts
     idx={}
     for ci,c in enumerate(chs):
-        for pi,pp in enumerate(c['p']): idx.setdefault(pp,(ci,pi))
+        for pi,pp in enumerate(c['p']): idx.setdefault(pp[:60],(ci,pi))
     remap=[]
     for oc in old['chapters']:
-        hit=next((idx[pp] for pp in oc['p'][:5] if pp in idx),None) or (remap[-1] if remap else [0,0])
+        hit=next((idx[pp[:60]] for pp in oc['p'][:5] if pp[:60] in idx),None) or (remap[-1] if remap else [0,0])
         remap.append(list(hit))
-    rec={**{k:v for k,v in old.items() if k!='chapters'},'v':2,'chapters':chs,'remap':remap}
+    rec={**{k:v for k,v in old.items() if k!='chapters'},'v':(old.get('v') or 1)+1,'chapters':chs,'remap':remap}
     with gzip.open(f'{OUT}/{f}','wt',compresslevel=9) as g: json.dump(rec,g,ensure_ascii=False,separators=(',',':'))
     w=[words(c['p']) for c in chs]
     return i,'ok',dict(n=len(chs),old=len(old['chapters']),max=max(w),oldmax=max(words(c['p']) for c in old['chapters']),groups=len({c.get('g') for c in chs if c.get('g')}),parts=all(c['t'].startswith('Part ') for c in chs))
